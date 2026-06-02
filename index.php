@@ -100,7 +100,7 @@
                 </div>
             </div>
             <h1 class="text-2xl font-bold mb-2 text-center text-textMain">Masuk ke EZPost</h1>
-            <p class="text-center text-sm text-textSec mb-6">Default: thirdchilddesigner@gmail.com / Alliswell95</p>
+            <p class="text-center text-sm text-textSec mb-6">LET'S GOOOOOOOO</p>
             <form id="loginForm" class="space-y-4">
                 <div>
                     <label for="email" class="block text-sm font-medium text-textSec mb-1">Email</label>
