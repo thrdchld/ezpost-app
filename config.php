@@ -2,7 +2,7 @@
 // Konfigurasi Database (TiDB Serverless)
 $db_host = 'gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com';
 $db_port = '4000';
-$db_name = 'sys';
+$db_name = 'test';
 $db_user = '43zndLs5D8mdMVi.root';
 $db_pass = 'axvj3vCLdkpSHdtD';
 
