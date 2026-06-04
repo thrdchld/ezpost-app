@@ -249,10 +249,10 @@
                     
                     <!-- UI TANGGAL & JAM -->
                     <div class="flex items-center gap-2 w-full sm:w-auto">
-                        <input type="date" id="scheduleDate" class="flex-1 sm:w-[160px] bg-bgMain border border-borderCol rounded-lg px-3 py-2.5 text-sm focus:border-accent text-textMain shadow-inner transition-colors outline-none uppercase tracking-wider" onkeydown="return false">
-                        <input type="time" id="scheduleTimeHour" class="w-[100px] sm:w-[110px] bg-bgMain border border-borderCol rounded-lg px-3 py-2.5 text-sm focus:border-accent text-textMain shadow-inner transition-colors outline-none tracking-wider" onkeydown="return false">
+                        <input type="date" id="scheduleDate" class="w-full sm:w-[160px] bg-bgMain border border-borderCol rounded-lg px-3 py-2.5 text-sm focus:border-accent text-textMain shadow-inner transition-colors outline-none uppercase tracking-wider" onkeydown="return false">
+                        <input type="time" id="scheduleTimeHour" class="w-full sm:w-[110px] bg-bgMain border border-borderCol rounded-lg px-3 py-2.5 text-sm focus:border-accent text-textMain shadow-inner transition-colors outline-none tracking-wider" onkeydown="return false">
                         
-                        <button type="button" id="btnClearDate" class="hidden text-[var(--error-text)] hover:text-red-700 p-2.5 rounded transition-colors bg-[var(--error-bg)] border border-[var(--error-text)] shrink-0" title="Batal Jadwal">
+                        <button type="button" id="btnClearDate" class="hidden text-[var(--error-text)] hover:text-red-700 p-2 rounded transition-colors bg-[var(--error-bg)] border border-[var(--error-text)] ml-1 shrink-0" title="Batal Jadwal">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
@@ -850,29 +850,6 @@
 
         if(document.getElementById('view-accounts')) checkAccountStatus();
 
-        // --- AUTH LOGIC ---
-        const loginForm = document.getElementById('loginForm');
-        if (loginForm) {
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const btn = loginForm.querySelector('button');
-                const oriHtml = btn.innerHTML;
-                btn.innerHTML = '<svg class="animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Memverifikasi...';
-                
-                try {
-                    const res = await fetch('api.php?action=login', { method: 'POST', body: new FormData(loginForm) });
-                    const data = parseSafeJSON(await res.text());
-                    if (data.status === 'success') location.reload();
-                    else {
-                        document.getElementById('loginError').textContent = data.message;
-                        document.getElementById('loginError').classList.remove('hidden');
-                        btn.innerHTML = oriHtml;
-                    }
-                } catch(e) { showModal('Error', "Kesalahan server atau jaringan."); btn.innerHTML = oriHtml; }
-            });
-        }
-        function logout() { fetch('api.php?action=logout').then(() => location.reload()); }
-
         // --- DRAFT PROTECTION & MEDIA UPLOAD ---
         const textarea = document.getElementById('postContent');
         const livePreviewArea = document.getElementById('threadsPreview');
@@ -988,7 +965,7 @@
             const platform = document.getElementById('platformSelect').value;
             
             if (text.length === 0 && selectedFiles.length === 0) {
-                livePreviewArea.innerHTML = '<div class="text-sm text-textSec italic text-center py-10 border border-dashed border-borderCol rounded-lg flex flex-col items-center gap-2"><svg class="opacity-50" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Ketik sesuatu atau tambahkan media...</div>';
+                livePreviewArea.innerHTML = '<div class="text-sm text-textSec italic text-center py-10 border border-dashed border-borderCol rounded-lg flex flex-col items-center gap-2"><svg class="opacity-50" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Ketik sesuatu di editor...</div>';
                 return;
             }
 
