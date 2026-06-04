@@ -94,72 +94,95 @@ try {
             }
             ob_clean(); echo json_encode(['status' => 'success', 'message' => "$deleted file dihapus." . ($skipped > 0 ? " ($skipped file dilindungi karena masuk jadwal)" : "")]); break;
 
+        case 'get_progress':
+            if (!is_logged_in()) { ob_clean(); echo json_encode(['status'=>'error']); exit; }
+            $file = "uploads/progress_" . $_SESSION['user_id'] . ".txt";
+            $text = file_exists($file) ? file_get_contents($file) : 'Proses...';
+            ob_clean(); echo json_encode(['status' => 'success', 'progress' => $text]); exit;
+
         case 'save_post':
             verify_csrf();
             if (!is_logged_in()) throw new Exception('Sesi habis.');
 
-            $platform = $_POST['platform'] ?? 'facebook';
-            $content = $_POST['content'] ?? ''; 
-            $scheduled_at = !empty($_POST['scheduled_at']) ? $_POST['scheduled_at'] : null;
-            $status = $scheduled_at ? 'scheduled' : 'published'; 
+            $progress_file = "uploads/progress_" . $_SESSION['user_id'] . ".txt";
+            @file_put_contents($progress_file, "Menyiapkan data...");
 
-            $stmt = $pdo->prepare("SELECT access_token, page_id FROM social_accounts WHERE user_id = ? AND provider = ?");
-            $stmt->execute([$_SESSION['user_id'], $platform]);
-            $account = $stmt->fetch();
-            if (!$account) throw new Exception("Akun {$platform} belum terhubung.");
+            try {
+                $platform = $_POST['platform'] ?? 'facebook';
+                $content = $_POST['content'] ?? ''; 
+                $scheduled_at = !empty($_POST['scheduled_at']) ? $_POST['scheduled_at'] : null;
+                $status = $scheduled_at ? 'scheduled' : 'published'; 
 
-            $stmt = $pdo->prepare("INSERT INTO posts (user_id, platform, content, status, scheduled_at) VALUES (?, ?, ?, ?, ?)");
-            $stmt->execute([$_SESSION['user_id'], $platform, $content, $status, $scheduled_at]);
-            $post_id = $pdo->lastInsertId();
+                $stmt = $pdo->prepare("SELECT access_token, page_id FROM social_accounts WHERE user_id = ? AND provider = ?");
+                $stmt->execute([$_SESSION['user_id'], $platform]);
+                $account = $stmt->fetch();
+                if (!$account) throw new Exception("Akun {$platform} belum terhubung.");
 
-            $uploaded_media = [];
-            if (!empty($_FILES['media']['name']) && is_array($_FILES['media']['name']) && !empty($_FILES['media']['name'][0])) {
-                $upload_dir = 'uploads/';
-                if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
+                @file_put_contents($progress_file, "Menyimpan ke Database...");
+                $stmt = $pdo->prepare("INSERT INTO posts (user_id, platform, content, status, scheduled_at) VALUES (?, ?, ?, ?, ?)");
+                $stmt->execute([$_SESSION['user_id'], $platform, $content, $status, $scheduled_at]);
+                $post_id = $pdo->lastInsertId();
 
-                foreach ($_FILES['media']['name'] as $key => $name) {
-                    $tmp_name = $_FILES['media']['tmp_name'][$key];
-                    if ($_FILES['media']['error'][$key] === UPLOAD_ERR_OK) {
-                        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                        $mime = finfo_file($finfo, $tmp_name);
-                        finfo_close($finfo);
+                $uploaded_media = [];
+                if (!empty($_FILES['media']['name']) && is_array($_FILES['media']['name']) && !empty($_FILES['media']['name'][0])) {
+                    $upload_dir = 'uploads/';
+                    if (!is_dir($upload_dir)) mkdir($upload_dir, 0755, true);
 
-                        $media_type = strpos($mime, 'video') !== false ? 'video' : 'image';
-                        $ext = pathinfo($name, PATHINFO_EXTENSION);
-                        $new_name = uniqid() . '.' . $ext;
-                        $destination = $upload_dir . $new_name;
+                    $total_files = count($_FILES['media']['name']);
+                    foreach ($_FILES['media']['name'] as $key => $name) {
+                        @file_put_contents($progress_file, "Upload Media (" . ($key+1) . "/$total_files)...");
+                        $tmp_name = $_FILES['media']['tmp_name'][$key];
+                        if ($_FILES['media']['error'][$key] === UPLOAD_ERR_OK) {
+                            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                            $mime = finfo_file($finfo, $tmp_name);
+                            finfo_close($finfo);
 
-                        if (move_uploaded_file($tmp_name, $destination)) {
-                            $stmtMedia = $pdo->prepare("INSERT INTO post_media (post_id, file_path, media_type) VALUES (?, ?, ?)");
-                            $stmtMedia->execute([$post_id, $destination, $media_type]);
+                            // Batas upload file besar untuk Hugging Face / TiDB
+                            if ($_FILES['media']['size'][$key] > 50 * 1024 * 1024) continue; 
                             
-                            $uploaded_media[] = [
-                                'path' => realpath($destination),    
-                                'url'  => $base_url . $destination,  
-                                'type' => $media_type,
-                                'mime' => $mime
-                            ];
+                            $media_type = strpos($mime, 'video') !== false ? 'video' : 'image';
+                            $ext = pathinfo($name, PATHINFO_EXTENSION);
+                            $new_name = uniqid() . '.' . $ext;
+                            $destination = $upload_dir . $new_name;
+
+                            if (move_uploaded_file($tmp_name, $destination)) {
+                                $stmtMedia = $pdo->prepare("INSERT INTO post_media (post_id, file_path, media_type) VALUES (?, ?, ?)");
+                                $stmtMedia->execute([$post_id, $destination, $media_type]);
+                                
+                                $uploaded_media[] = [
+                                    'path' => realpath($destination),    
+                                    'url'  => $base_url . $destination,  
+                                    'type' => $media_type,
+                                    'mime' => $mime
+                                ];
+                            }
                         }
                     }
                 }
-            }
 
-            if (!$scheduled_at) {
-                if ($platform === 'facebook') {
-                    $result = publish_to_fb_direct($content, $account['access_token'], $account['page_id'], $uploaded_media);
-                } elseif ($platform === 'threads') {
-                    $result = publish_to_threads_direct($content, $account['access_token'], $uploaded_media);
+                // DIRECT PUBLISH JIKA BUKAN JADWAL
+                if (!$scheduled_at) {
+                    if ($platform === 'facebook') {
+                        @file_put_contents($progress_file, "Publishing ke FB...");
+                        $result = publish_to_fb_direct($content, $account['access_token'], $account['page_id'], $uploaded_media);
+                    } elseif ($platform === 'threads') {
+                        $result = publish_to_threads_direct($content, $account['access_token'], $uploaded_media, $progress_file);
+                    }
+                    
+                    if (isset($result['error'])) {
+                        $update = $pdo->prepare("UPDATE posts SET status = 'failed', error_log = ? WHERE id = ?");
+                        $update->execute([$result['error'], $post_id]);
+                        throw new Exception("Ditolak Meta: " . $result['error']);
+                    }
                 }
-                
-                if (isset($result['error'])) {
-                    $update = $pdo->prepare("UPDATE posts SET status = 'failed', error_log = ? WHERE id = ?");
-                    $update->execute([$result['error'], $post_id]);
-                    throw new Exception("Ditolak Meta: " . $result['error']);
-                }
-            }
 
-            ob_clean();
-            echo json_encode(['status' => 'success', 'post_id' => $post_id, 'message' => $scheduled_at ? 'Berhasil masuk antrian jadwal.' : 'Dipublikasikan!']);
+                @unlink($progress_file);
+                ob_clean();
+                echo json_encode(['status' => 'success', 'post_id' => $post_id, 'message' => $scheduled_at ? 'Berhasil masuk antrian jadwal.' : 'Dipublikasikan!']);
+            } catch (Exception $e) {
+                @unlink($progress_file);
+                throw $e;
+            }
             break;
             
         case 'get_posts':
@@ -183,6 +206,7 @@ try {
             $pdo->prepare("DELETE FROM posts WHERE id = ? AND user_id = ?")->execute([$post_id, $_SESSION['user_id']]);
             ob_clean(); echo json_encode(['status' => 'success', 'message' => 'Jadwal dan medianya berhasil dihapus.']); break;
 
+        // ENDPOINT BARU: FORCE PUBLISH (Bypass jadwal dan tembak sekarang)
         case 'force_publish':
             verify_csrf();
             if (!is_logged_in()) throw new Exception('Sesi habis.');
@@ -268,11 +292,14 @@ function publish_to_fb_direct($text, $token, $page_id, $media_files) {
 }
 
 // =================== FUNGSI THREADS ===================
-function publish_to_threads_direct($content, $token, $media_files) {
+function publish_to_threads_direct($content, $token, $media_files, $progress_file = null) {
     $threadsArray = split_threads($content);
     $reply_to_id = null; 
+    $totalParts = count($threadsArray);
 
     foreach ($threadsArray as $index => $textChunk) {
+        $currentPart = $index + 1;
+        
         $url1 = "https://graph.threads.net/v1.0/me/threads";
         $data1 = ['text' => $textChunk, 'access_token' => $token];
         if ($reply_to_id) $data1['reply_to_id'] = $reply_to_id;
@@ -289,6 +316,8 @@ function publish_to_threads_direct($content, $token, $media_files) {
 
         if ($index > 0) sleep(6); 
 
+        if ($progress_file) @file_put_contents($progress_file, "Menyiapkan Part ($currentPart/$totalParts)...");
+
         $containerId = null; $lastError = "";
         for ($retry = 0; $retry < 3; $retry++) {
             $ch1 = curl_init($url1); curl_setopt($ch1, CURLOPT_POST, true); curl_setopt($ch1, CURLOPT_POSTFIELDS, http_build_query($data1));
@@ -301,16 +330,18 @@ function publish_to_threads_direct($content, $token, $media_files) {
             
             if (stripos($lastError, 'permission') !== false || stripos($lastError, 'OAuthException') !== false) {
                 if(stripos($lastError, 'threads_manage_replies') !== false || $index > 0){
-                    return ['error' => "Gagal Threads (Part ".($index+1)."): DITOLAK. Wajib centang 'threads_manage_replies' di pengaturan Token!"];
+                    return ['error' => "Gagal Threads (Part $currentPart): DITOLAK. Wajib centang 'threads_manage_replies' di pengaturan Token!"];
                 }
             }
+            if ($progress_file) @file_put_contents($progress_file, "Retry Part ($currentPart/$totalParts)...");
             sleep(4);
         }
-        if (!$containerId) return ['error' => "Gagal buat container (Part ".($index+1)."): " . $lastError];
+        if (!$containerId) return ['error' => "Gagal buat container (Part $currentPart): " . $lastError];
 
         if ($isVideo) {
             $is_ready = false;
             for ($i = 0; $i < 4; $i++) { 
+                if ($progress_file) @file_put_contents($progress_file, "Render Video Meta ($currentPart/$totalParts)... Tunggu " . ($i*8) . "s");
                 sleep(8); 
                 $checkUrl = "https://graph.threads.net/v1.0/{$containerId}?fields=status,error_message&access_token={$token}";
                 $chCheck = curl_init($checkUrl); curl_setopt($chCheck, CURLOPT_RETURNTRANSFER, true); curl_setopt($chCheck, CURLOPT_SSL_VERIFYPEER, false);
@@ -321,6 +352,8 @@ function publish_to_threads_direct($content, $token, $media_files) {
             }
             if (!$is_ready) return ['error' => "Video gagal diproses oleh Meta (Timeout)."];
         }
+
+        if ($progress_file) @file_put_contents($progress_file, "Publish Part ($currentPart/$totalParts)...");
 
         $url2 = "https://graph.threads.net/v1.0/me/threads_publish";
         $data2 = ['creation_id' => $containerId, 'access_token' => $token];
@@ -337,7 +370,7 @@ function publish_to_threads_direct($content, $token, $media_files) {
             sleep(3);
         }
 
-        if (!$publishedId) return ['error' => "Gagal publish container (Part ".($index+1)."): " . $lastErrorPublish];
+        if (!$publishedId) return ['error' => "Gagal publish container (Part $currentPart): " . $lastErrorPublish];
         
         $reply_to_id = $publishedId;
         sleep(4); 
