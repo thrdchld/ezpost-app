@@ -6,18 +6,24 @@ $db_name = 'test';
 $db_user = '43zndLs5D8mdMVi.root';
 $db_pass = 'axvj3vCLdkpSHdtD';
 
+// 1. SET TIMEZONE PHP KE WIB (Mencegah Delay Cron)
+date_default_timezone_set('Asia/Jakarta');
+
 try {
-    // WAJIB SSL UNTUK TIDB SERVERLESS
     $dsn = "mysql:host=$db_host;port=$db_port;dbname=$db_name;charset=utf8mb4";
     $options = [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES   => false,
-        // Parameter keamanan wajib TiDB
+        // Parameter keamanan wajib TiDB Serverless
         PDO::MYSQL_ATTR_SSL_CA       => '/etc/ssl/certs/ca-certificates.crt',
         PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false
     ];
     $pdo = new PDO($dsn, $db_user, $db_pass, $options);
+    
+    // 2. SET TIMEZONE DATABASE TIDB KE WIB (UTC+7)
+    $pdo->exec("SET time_zone = '+07:00';");
+    
 } catch (PDOException $e) {
     die("Koneksi Database TiDB Gagal: " . $e->getMessage());
 }
