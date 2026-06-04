@@ -1,17 +1,18 @@
 <?php
+// MENGABAIKAN PEMUTUSAN KONEKSI DARI PIPEDREAM & MENCEGAH TIMEOUT INTERNAL
 ignore_user_abort(true);
 set_time_limit(0);
 
-// Script Eksekusi Jadwal EZPost
 require_once 'config.php';
 
 $secret_key = 'EZPost1995';
 if (!isset($_GET['secret']) || $_GET['secret'] !== $secret_key) {
-    die("Akses Ditolak. Secret Key tidak valid.");
+    die("Akses Ditolak.");
 }
 
 $current_time = date('Y-m-d H:i:s');
 
+// Mencari postingan di antrian yang waktunya sudah tiba atau kelewat
 $stmt = $pdo->prepare("SELECT p.*, s.access_token, s.page_id 
                        FROM posts p 
                        JOIN social_accounts s ON p.user_id = s.user_id AND p.platform = s.provider
@@ -19,11 +20,7 @@ $stmt = $pdo->prepare("SELECT p.*, s.access_token, s.page_id
 $stmt->execute([$current_time]);
 $posts = $stmt->fetchAll();
 
-$isSecure = false;
-if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') { $isSecure = true; }
-elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https' || !empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') { $isSecure = true; }
-$protocol = $isSecure ? 'https' : 'http';
-
+$protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
 $domain = $_SERVER['HTTP_HOST'];
 $path_dir = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 $base_url = $protocol . "://" . $domain . $path_dir . "/";
@@ -147,7 +144,7 @@ function cron_publish_to_threads_direct($content, $token, $media_files) {
             $data1['media_type'] = 'TEXT';
         }
 
-        if ($index > 0) sleep(4); 
+        if ($index > 0) sleep(6); 
 
         $containerId = null;
         $lastError = "";
@@ -172,17 +169,14 @@ function cron_publish_to_threads_direct($content, $token, $media_files) {
                     return ['error' => "Gagal Threads (Part ".($index+1)."): Token Anda DITOLAK. Wajib centang 'threads_manage_replies' saat buat token!"];
                 }
             }
-            sleep(3);
+            sleep(4);
         }
 
         if (!$containerId) return ['error' => "Gagal buat container (Part ".($index+1)."): " . $lastError];
 
-        // JEDA EMAS (GOLDEN DELAY)
-        if (!$isVideo) { 
-            sleep(2); 
-        } else {
+        if ($isVideo) {
             $is_ready = false;
-            for ($i = 0; $i < 8; $i++) { 
+            for ($i = 0; $i < 4; $i++) { 
                 sleep(8); 
                 $checkUrl = "https://graph.threads.net/v1.0/{$containerId}?fields=status,error_message&access_token={$token}";
                 $chCheck = curl_init($checkUrl);
@@ -226,7 +220,7 @@ function cron_publish_to_threads_direct($content, $token, $media_files) {
         if (!$publishedId) return ['error' => "Gagal publish container (Part ".($index+1)."): " . $lastErrorPublish];
         
         $reply_to_id = $publishedId;
-        sleep(3); 
+        sleep(4); 
     }
     
     return ['success' => true];
@@ -242,6 +236,16 @@ $success_count = 0;
 $failed_count = 0;
 
 foreach ($posts as $post) {
+
+    // --- PROTEKSI ANTI-TRIPLE POST DARI PIPEDREAM RETRY ---
+    // Gembok baris database agar Pipedream kedua/ketiga yang datang telat tidak bisa mengambil post yang sama!
+    $lockStmt = $pdo->prepare("UPDATE posts SET status = 'failed', error_log = 'Memproses/Gembok...' WHERE id = ? AND status = 'scheduled'");
+    $lockStmt->execute([$post['id']]);
+    
+    // Jika row tidak berubah, berarti Cron/Pipedream lain sudah memproses postingan ini beberapa detik lalu! Lewati.
+    if ($lockStmt->rowCount() === 0) continue; 
+    // ------------------------------------------------------
+
     $processed_count++;
     
     $stmtMedia = $pdo->prepare("SELECT file_path, media_type FROM post_media WHERE post_id = ?");
@@ -274,15 +278,7 @@ foreach ($posts as $post) {
             $result = cron_publish_to_threads_direct($post['content'], $post['access_token'], $media_files);
         }
 
-        // RECONNECT DATABASE UNTUK MENCEGAH ERROR 2006
-        global $db_host, $db_name, $db_user, $db_pass;
-        try {
-            $pdo = new PDO("mysql:host=$db_host;port=4000;dbname=$db_name;charset=utf8mb4", $db_user, $db_pass, [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false
-            ]);
-        } catch (Exception $e) {}
-
+        // Buka gembok dan tandai sesuai hasil akhirnya
         if (isset($result['success'])) {
             $pdo->prepare("UPDATE posts SET status = 'published', error_log = NULL WHERE id = ?")->execute([$post['id']]);
             $success_count++;
