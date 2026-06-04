@@ -1,40 +1,70 @@
-CREATE TABLE IF NOT EXISTS users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- phpMyAdmin SQL Dump untuk EZPost
+-- Perhatian: Menjalankan script ini akan menghapus tabel lama dan menggantinya dengan yang baru (bersih).
 
-CREATE TABLE IF NOT EXISTS social_accounts (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    provider ENUM('facebook', 'threads') NOT NULL,
-    access_token TEXT NOT NULL,
-    page_id VARCHAR(255) NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+07:00";
 
-CREATE TABLE IF NOT EXISTS posts (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    platform ENUM('facebook', 'threads') NOT NULL,
-    content TEXT,
-    status ENUM('scheduled', 'published', 'failed') NOT NULL DEFAULT 'published',
-    scheduled_at DATETIME NULL,
-    error_log TEXT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
+DROP TABLE IF EXISTS `post_media`;
+DROP TABLE IF EXISTS `posts`;
+DROP TABLE IF EXISTS `social_accounts`;
+DROP TABLE IF EXISTS `users`;
 
-CREATE TABLE IF NOT EXISTS post_media (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    post_id INT NOT NULL,
-    file_path VARCHAR(255) NOT NULL,
-    media_type ENUM('image', 'video') NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
-);
+-- 1. Tabel Users
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `email` varchar(255) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
+  `created_at` timestamp DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Memasukkan akun Admin default (Password akan otomatis di-enkripsi saat login pertama)
-INSERT IGNORE INTO users (email, password_hash) VALUES ('thirdchilddesigner@gmail.com', 'Alliswell95');
+-- MEMASUKKAN EMAIL & PASSWORD ANDA
+INSERT INTO `users` (`id`, `email`, `password_hash`) VALUES
+(1, 'thirdchilddesigner@gmail.com', 'Alliswell95');
+
+
+-- 2. Tabel Akun Sosial Media
+CREATE TABLE `social_accounts` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `provider` enum('facebook','threads') NOT NULL,
+  `access_token` text NOT NULL,
+  `page_id` varchar(255) DEFAULT NULL,
+  `created_at` timestamp DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_provider` (`user_id`,`provider`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- MEMASUKKAN TOKEN ANDA SECARA OTOMATIS
+INSERT INTO `social_accounts` (`user_id`, `provider`, `access_token`, `page_id`) VALUES
+(1, 'facebook', 'EAAWGZABi0lk0BRkABn1Cv09Rr3FrAV7gAirPeJ0It7FucZBVPZAy6orIwQXc94XU8rzR2URgXZCZBvEwY7t4SFHy2FWM55YuBVUd71vsn0Ep9mKV15FCoS2NGcVD5hyOcdHMm6iTHofgn5X1sBU0OZA0COt430HXczaioAKOSZBf8wEraasOlFZBwfVLHyiQJPRfZCnhgZBTsT', '872667295938279'),
+(1, 'threads', 'THAAN8cjtkpoxBYmJUaXRQemlXbkF6RjJiSkNFSjlTLUR5d01RWjc0ZAW9fTTd5T0YybnpnYnpLVl9mTHVZAMVhiMUVrTm1VUzVnQmlRaUNOV0RKcjJuTEFya09ZAZAlU3al9oeGpBd3FETkRkd2lIMnI1eFdXRng1WHpqZAlc3SDFoM29yUQZDZD', NULL);
+
+
+-- 3. Tabel Posting
+CREATE TABLE `posts` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `platform` enum('facebook','threads') NOT NULL,
+  `content` text NOT NULL,
+  `status` enum('draft','scheduled','published','failed') DEFAULT 'draft',
+  `scheduled_at` datetime DEFAULT NULL,
+  `error_log` text DEFAULT NULL,
+  `created_at` timestamp DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- 4. Tabel Media untuk Posting
+CREATE TABLE `post_media` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `post_id` int(11) NOT NULL,
+  `file_path` varchar(255) NOT NULL,
+  `media_type` enum('image','video') NOT NULL,
+  `created_at` timestamp DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+COMMIT;
