@@ -247,7 +247,6 @@
                 <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto relative">
                     <label class="text-sm font-bold text-textSec shrink-0">Waktu (Opsional):</label>
                     
-                    <!-- UI TANGGAL & JAM -->
                     <div class="flex items-center gap-2 w-full sm:w-auto">
                         <input type="date" id="scheduleDate" class="w-full sm:w-[160px] bg-bgMain border border-borderCol rounded-lg px-3 py-2.5 text-sm focus:border-accent text-textMain shadow-inner transition-colors outline-none uppercase tracking-wider" onkeydown="return false">
                         <input type="time" id="scheduleTimeHour" class="w-full sm:w-[110px] bg-bgMain border border-borderCol rounded-lg px-3 py-2.5 text-sm focus:border-accent text-textMain shadow-inner transition-colors outline-none tracking-wider" onkeydown="return false">
@@ -654,34 +653,23 @@
 
         // FITUR BARU: FORCE PUBLISH
         window.forcePublishPost = function(id) {
-            showModal('Kirim Sekarang?', 'Postingan ini akan diabaikan dari antrian jadwal dan langsung dikirim ke server Meta detik ini juga. Lanjutkan?', true, async () => {
+            showModal('Kirim Sekarang?', 'Postingan ini akan diabaikan dari antrian jadwal dan langsung dikirim ke Meta detik ini juga. Lanjutkan?', true, async () => {
                 const formData = new FormData();
                 formData.append('csrf_token', csrfToken);
                 formData.append('id', id);
                 formData.append('action', 'force_publish');
                 
-                showToast('🚀 Mengirim permintaan ke server...', 'success');
+                showToast('🚀 Mengirim permintaan...', 'success');
                 try {
                     const res = await fetch('api.php', { method: 'POST', body: formData });
                     const data = parseSafeJSON(await res.text());
-                    
                     if(data.status === 'success') {
-                        // Tembak cron diam-diam di background agar dieksekusi sekarang juga
+                        // Tembak cron diam-diam di background
                         fetch('cron.php?secret=EZPost1995')
-                            .then(() => {
-                                showToast('✅ Postingan sukses terkirim ke Meta!');
-                                setTimeout(loadScheduledPosts, 1500); // refresh list
-                            })
-                            .catch(() => {
-                                showToast('Jadwal sudah diubah ke Sekarang. Menunggu cron jalan.');
-                                loadScheduledPosts();
-                            });
-                    } else {
-                        showModal('Gagal', data.message);
-                    }
-                } catch(e) { 
-                    showModal('Error', 'Gagal memproses pengiriman manual.'); 
-                }
+                            .then(() => { showToast('✅ Sukses terkirim ke Meta!'); setTimeout(loadScheduledPosts, 1500); })
+                            .catch(() => { showToast('Jadwal sudah diubah ke Sekarang. Menunggu cron jalan.'); loadScheduledPosts(); });
+                    } else { showModal('Gagal', data.message); }
+                } catch(e) { showModal('Error', 'Gagal memproses.'); }
             });
         }
 
@@ -850,10 +838,34 @@
 
         if(document.getElementById('view-accounts')) checkAccountStatus();
 
+        // --- AUTH LOGIC ---
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = loginForm.querySelector('button');
+                const oriHtml = btn.innerHTML;
+                btn.innerHTML = '<svg class="animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Memverifikasi...';
+                
+                try {
+                    const res = await fetch('api.php?action=login', { method: 'POST', body: new FormData(loginForm) });
+                    const data = parseSafeJSON(await res.text());
+                    if (data.status === 'success') location.reload();
+                    else {
+                        document.getElementById('loginError').textContent = data.message;
+                        document.getElementById('loginError').classList.remove('hidden');
+                        btn.innerHTML = oriHtml;
+                    }
+                } catch(e) { showModal('Error', "Kesalahan server atau jaringan."); btn.innerHTML = oriHtml; }
+            });
+        }
+        function logout() { fetch('api.php?action=logout').then(() => location.reload()); }
+
         // --- DRAFT PROTECTION & MEDIA UPLOAD ---
         const textarea = document.getElementById('postContent');
         const livePreviewArea = document.getElementById('threadsPreview');
         const btnResetDraft = document.getElementById('btnResetDraft');
+        let selectedFiles = [];
 
         function checkDraftState() {
             if (textarea && (textarea.value.trim().length > 0 || selectedFiles.length > 0)) {
