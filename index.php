@@ -47,7 +47,6 @@
             --error-bg: #FEE2E2;
             --error-text: #B91C1C;
         }
-        
         .dark {
             color-scheme: dark;
             --bg-main: #111827;
@@ -70,17 +69,18 @@
         ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
         textarea:focus, input:focus, select:focus, button:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 
+        /* Aksesibilitas WCAG untuk icon kalender/jam bawaan */
+        input[type="date"], input[type="time"] { color-scheme: light dark; }
+        .dark input[type="date"], .dark input[type="time"] { color-scheme: dark; }
+        
         input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator {
-            cursor: pointer; opacity: 0.6; filter: invert(0.5);
-        }
-        .dark input[type="date"]::-webkit-calendar-picker-indicator, .dark input[type="time"]::-webkit-calendar-picker-indicator {
-            filter: invert(0.8);
+            cursor: pointer; opacity: 0.6;
         }
     </style>
 </head>
 <body class="bg-bgMain text-textMain h-[100dvh] w-full overflow-hidden flex flex-col md:flex-row text-[15px]">
 
-    <!-- MODAL & TOAST UI -->
+    <!-- GLOBAL MODAL & TOAST UI (NO ALERTS) -->
     <div id="ezModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 opacity-0 pointer-events-none transition-opacity duration-200 hidden">
         <div class="bg-panel border border-borderCol rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-200" id="ezModalContent">
             <h3 class="text-xl font-bold text-textMain mb-2" id="ezModalTitle">Perhatian</h3>
@@ -88,6 +88,29 @@
             <div class="flex justify-end gap-3" id="ezModalActions"></div>
         </div>
     </div>
+    
+    <!-- MODAL EDIT JADWAL KHUSUS -->
+    <div id="editScheduleModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 opacity-0 pointer-events-none transition-opacity duration-200 hidden">
+        <div class="bg-panel border border-borderCol rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl transform scale-95 transition-transform duration-200" id="editScheduleModalContent">
+            <h3 class="text-xl font-bold text-textMain mb-4 border-b border-borderCol pb-2">Edit Jadwal Post</h3>
+            <input type="hidden" id="editScheduleId">
+            <div class="flex flex-col space-y-4 mb-6">
+                <div>
+                    <label class="block text-xs font-medium text-textSec mb-1">Tanggal Baru</label>
+                    <input type="date" id="editScheduleDate" class="w-full bg-bgMain border border-borderCol rounded-lg px-4 py-3 text-sm focus:border-accent text-textMain outline-none transition-colors color-scheme-dark">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-textSec mb-1">Waktu Baru</label>
+                    <input type="time" id="editScheduleTime" class="w-full bg-bgMain border border-borderCol rounded-lg px-4 py-3 text-sm focus:border-accent text-textMain outline-none transition-colors color-scheme-dark">
+                </div>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeEditScheduleModal()" class="px-5 py-2.5 rounded-lg font-bold text-textSec bg-bgMain border border-borderCol hover:bg-borderCol transition-colors text-sm">Batal</button>
+                <button onclick="submitEditSchedule()" class="px-5 py-2.5 rounded-lg font-bold text-white bg-accent hover:bg-accentHover transition-colors shadow-sm text-sm">Simpan Jadwal</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toastContainer" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none"></div>
 
     <?php if (!is_logged_in()): ?>
@@ -96,21 +119,21 @@
         <div class="bg-panel p-8 rounded-xl border border-borderCol w-full max-w-md shadow-lg">
             <div class="flex justify-center mb-6">
                 <div class="w-12 h-12 bg-accent rounded-xl flex items-center justify-center shadow-md text-white">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                 </div>
             </div>
             <h1 class="text-2xl font-bold mb-2 text-center text-textMain">Masuk ke EZPost</h1>
+            <p class="text-center text-sm text-textSec mb-6">Default: thirdchilddesigner@gmail.com</p>
             <form id="loginForm" class="space-y-4">
                 <div>
-                    <label for="email" class="block text-sm font-medium text-textSec mb-1">Email</label>
-                    <input type="email" id="email" name="email" required class="w-full bg-bgMain border border-borderCol rounded-lg px-4 py-3 focus:border-accent transition-colors text-textMain">
+                    <label class="block text-sm font-medium text-textSec mb-1">Email</label>
+                    <input type="email" name="email" required class="w-full bg-bgMain border border-borderCol rounded-lg px-4 py-3 focus:border-accent text-textMain">
                 </div>
                 <div>
-                    <label for="password" class="block text-sm font-medium text-textSec mb-1">Password</label>
-                    <input type="password" id="password" name="password" required class="w-full bg-bgMain border border-borderCol rounded-lg px-4 py-3 focus:border-accent transition-colors text-textMain">
+                    <label class="block text-sm font-medium text-textSec mb-1">Password</label>
+                    <input type="password" name="password" required class="w-full bg-bgMain border border-borderCol rounded-lg px-4 py-3 focus:border-accent text-textMain">
                 </div>
-                <button type="submit" class="w-full bg-accent hover:bg-accentHover text-white font-semibold rounded-lg px-4 py-3 mt-6 transition-colors shadow-md flex justify-center items-center gap-2 group">
-                    <svg class="transition-transform group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                <button type="submit" class="w-full bg-accent hover:bg-accentHover text-white font-semibold rounded-lg px-4 py-3 mt-6 shadow-md flex justify-center items-center gap-2">
                     Masuk
                 </button>
                 <div id="loginError" class="text-[var(--error-text)] bg-[var(--error-bg)] text-sm mt-3 hidden text-center p-2 rounded-lg border border-[var(--error-text)]"></div>
@@ -122,52 +145,41 @@
     <!-- MAIN DASHBOARD -->
     <header class="md:hidden flex items-center justify-between p-4 border-b border-borderCol bg-panel w-full shrink-0 z-20 shadow-sm">
         <div class="flex items-center gap-3">
-            <div class="w-8 h-8 bg-accent rounded flex items-center justify-center shadow-sm text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-            </div>
+            <div class="w-8 h-8 bg-accent rounded flex items-center justify-center shadow-sm text-white"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
             <h1 class="text-lg font-bold text-textMain tracking-wide">EZPost</h1>
         </div>
-        <button id="menuBtn" class="text-textSec hover:text-textMain p-2 border border-transparent hover:border-borderCol rounded transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        </button>
+        <button id="menuBtn" class="text-textSec hover:text-textMain p-2 border border-transparent rounded"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
     </header>
 
     <div id="sidebarOverlay" class="fixed inset-0 bg-black/60 z-30 hidden md:hidden transition-opacity"></div>
-    <aside id="sidebar" class="w-64 border-r border-borderCol bg-panel flex flex-col h-full fixed md:relative transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out z-40 shrink-0 shadow-xl md:shadow-none">
+    <aside id="sidebar" class="w-64 border-r border-borderCol bg-panel flex flex-col h-full fixed md:relative transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-40 shrink-0 md:shadow-none">
         <div class="p-6 hidden md:flex items-center gap-3">
-            <div class="w-10 h-10 bg-accent rounded-lg flex items-center justify-center shadow-md text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-            </div>
+            <div class="w-10 h-10 bg-accent rounded-lg flex items-center justify-center shadow-md text-white"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
             <h1 class="text-xl font-bold text-textMain tracking-wide">EZPost</h1>
         </div>
         
         <nav class="flex-1 px-4 space-y-2 mt-4 md:mt-0 overflow-y-auto">
-            <a href="#create" class="nav-link group flex items-center gap-3 px-4 py-3 rounded-lg bg-borderCol font-medium text-textMain transition-all" data-target="create">
-                <svg class="text-accent transition-colors" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                <span>Buat Post</span>
+            <a href="#create" class="nav-link group flex items-center gap-3 px-4 py-3 rounded-lg bg-borderCol font-medium text-textMain" data-target="create">
+                <svg class="text-accent" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> <span>Buat Post</span>
             </a>
-            <a href="#scheduled" class="nav-link group flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-borderCol/50 text-textSec hover:text-textMain transition-all" data-target="scheduled">
-                <svg class="group-hover:text-accent transition-colors" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                <span>Jadwal & Riwayat</span>
+            <a href="#scheduled" class="nav-link group flex items-center gap-3 px-4 py-3 rounded-lg text-textSec hover:bg-borderCol/50 hover:text-textMain" data-target="scheduled">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> <span>Jadwal & Riwayat</span>
             </a>
-            <a href="#media" class="nav-link group flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-borderCol/50 text-textSec hover:text-textMain transition-all" data-target="media">
-                <svg class="group-hover:text-accent transition-colors" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                <span>Galeri Media</span>
+            <a href="#media" class="nav-link group flex items-center gap-3 px-4 py-3 rounded-lg text-textSec hover:bg-borderCol/50 hover:text-textMain" data-target="media">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg> <span>Galeri Media</span>
             </a>
-            <a href="#accounts" class="nav-link group flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-borderCol/50 text-textSec hover:text-textMain transition-all" data-target="accounts">
-                <svg class="group-hover:text-accent transition-colors" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                <span>Akun</span>
+            <a href="#accounts" class="nav-link group flex items-center gap-3 px-4 py-3 rounded-lg text-textSec hover:bg-borderCol/50 hover:text-textMain" data-target="accounts">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> <span>Akun</span>
             </a>
         </nav>
         
         <div class="p-4 border-t border-borderCol space-y-2 bg-panel">
-            <button id="themeToggle" class="w-full flex items-center justify-between px-4 py-3 rounded-lg text-textSec hover:bg-borderCol/50 hover:text-textMain transition-all group">
+            <button id="themeToggle" class="w-full flex items-center justify-between px-4 py-3 rounded-lg text-textSec hover:bg-borderCol/50 hover:text-textMain">
                 <span class="flex items-center gap-3" id="themeIconContainer"></span>
-                <span id="themeLabel" class="text-xs font-bold px-2 py-1 bg-bgMain rounded border border-borderCol transition-colors">GELAP</span>
+                <span id="themeLabel" class="text-xs font-bold px-2 py-1 bg-bgMain rounded border border-borderCol">GELAP</span>
             </button>
-            <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-textSec hover:bg-[var(--error-bg)] hover:text-[var(--error-text)] transition-all">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                <span>Keluar</span>
+            <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-textSec hover:bg-[var(--error-bg)] hover:text-[var(--error-text)]">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> <span>Keluar</span>
             </button>
         </div>
     </aside>
@@ -176,33 +188,27 @@
         <!-- View: Create Post -->
         <section id="view-create" class="view-section p-4 md:p-8 max-w-5xl mx-auto w-full block">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 relative z-10">
-                
                 <div class="flex items-center gap-3">
                     <h2 class="text-2xl font-bold text-textMain tracking-tight">Tulis Sesuatu</h2>
-                    <!-- TOMBOL RESET MINI -->
-                    <button id="btnResetDraft" class="hidden px-2.5 py-1.5 bg-[var(--error-bg)] text-[var(--error-text)] border border-[var(--error-text)] rounded-md text-xs font-bold hover:bg-red-700 hover:border-red-700 hover:text-white transition-colors flex items-center gap-1 shadow-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                        Reset
+                    <button id="btnResetDraft" class="hidden px-2.5 py-1.5 bg-[var(--error-bg)] text-[var(--error-text)] border border-[var(--error-text)] rounded-md text-xs font-bold hover:bg-red-700 hover:text-white transition-colors flex items-center gap-1 shadow-sm">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg> Reset
                     </button>
                 </div>
                 
                 <div class="relative w-full sm:w-64" id="platformDropdownWrap">
-                    <button type="button" id="platformTrigger" class="w-full bg-panel border border-borderCol rounded-lg px-4 py-2.5 text-textMain hover:border-accent shadow-sm flex items-center justify-between transition-colors">
+                    <button type="button" id="platformTrigger" class="w-full bg-panel border border-borderCol rounded-lg px-4 py-2.5 text-textMain hover:border-accent shadow-sm flex items-center justify-between">
                         <div class="flex items-center gap-3" id="platformSelectedText">
-                            <svg class="text-textMain" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M16 12v1.5a2.5 2.5 0 0 0 5 0v-1.5a9 9 0 1 0 -5.5 8.28"/></svg>
-                            <span class="font-medium">Threads</span>
+                            <svg class="text-textMain" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M16 12v1.5a2.5 2.5 0 0 0 5 0v-1.5a9 9 0 1 0 -5.5 8.28"/></svg> <span class="font-medium">Threads</span>
                         </div>
-                        <svg class="text-textSec transition-transform duration-200" id="platformArrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        <svg id="platformArrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
                     </button>
                     
                     <div id="platformMenu" class="hidden absolute top-full left-0 mt-2 w-full bg-panel border border-borderCol rounded-lg shadow-xl overflow-hidden opacity-0 transform -translate-y-2 transition-all duration-200">
-                        <button type="button" class="platform-option w-full text-left px-4 py-3 hover:bg-bgMain flex items-center gap-3 transition-colors" data-value="threads">
-                            <svg class="text-textMain" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M16 12v1.5a2.5 2.5 0 0 0 5 0v-1.5a9 9 0 1 0 -5.5 8.28"/></svg>
-                            <span class="font-medium">Threads</span>
+                        <button type="button" class="platform-option w-full text-left px-4 py-3 hover:bg-bgMain flex items-center gap-3" data-value="threads">
+                            <svg class="text-textMain" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M16 12v1.5a2.5 2.5 0 0 0 5 0v-1.5a9 9 0 1 0 -5.5 8.28"/></svg> <span class="font-medium">Threads</span>
                         </button>
-                        <button type="button" class="platform-option w-full text-left px-4 py-3 hover:bg-bgMain border-t border-borderCol flex items-center gap-3 transition-colors" data-value="facebook">
-                            <svg class="text-[#1877F2]" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
-                            <span class="font-medium">Facebook</span>
+                        <button type="button" class="platform-option w-full text-left px-4 py-3 hover:bg-bgMain border-t border-borderCol flex items-center gap-3" data-value="facebook">
+                            <svg class="text-[#1877F2]" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg> <span class="font-medium">Facebook</span>
                         </button>
                     </div>
                     <input type="hidden" id="platformSelect" value="threads">
@@ -210,15 +216,15 @@
             </div>
 
             <div class="flex flex-col lg:flex-row gap-6">
-                <!-- Text Area -->
+                <!-- Text Area Panel -->
                 <div class="flex-1 bg-panel border border-borderCol rounded-xl p-5 shadow-sm flex flex-col relative z-0">
-                    <textarea id="postContent" class="w-full bg-transparent resize-none flex-1 min-h-[200px] lg:min-h-[150px] text-textMain placeholder-textSec border-none p-0 focus:ring-0 leading-relaxed text-base" placeholder="Apa yang ingin Anda bagikan hari ini?"></textarea>
+                    <textarea id="postContent" class="w-full bg-transparent resize-none flex-1 min-h-[200px] text-textMain placeholder-textSec border-none p-0 focus:ring-0 leading-relaxed text-base" placeholder="Apa yang ingin Anda bagikan hari ini?"></textarea>
                     
                     <div id="mediaPreviewContainer" class="flex flex-wrap gap-3 mt-4 empty:hidden"></div>
 
                     <div class="mt-4 border-t border-borderCol pt-4 flex items-center justify-between">
-                        <label class="cursor-pointer text-textSec hover:text-accent transition-colors flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-bgMain border border-transparent hover:border-borderCol group">
-                            <svg class="group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        <label class="cursor-pointer text-textSec hover:text-accent flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-bgMain border border-transparent">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                             <span class="font-medium text-sm">Lampirkan Media</span>
                             <input type="file" id="mediaUpload" multiple accept="image/*,video/mp4" class="hidden">
                         </label>
@@ -226,61 +232,62 @@
                     </div>
                 </div>
 
-                <!-- Preview Panel -->
-                <div class="w-full lg:w-96 bg-panel border border-borderCol rounded-xl p-5 shadow-sm h-fit">
-                    <div class="flex items-center gap-2 mb-4">
-                        <div class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"></div>
-                        <h3 class="text-xs font-bold text-textSec uppercase tracking-wider">PREVIEW LIVE</h3>
+                <!-- Vertical Schedule & Preview Panel -->
+                <div class="w-full lg:w-96 flex flex-col gap-6">
+                    <!-- Schedule Box Vertical Layout -->
+                    <div class="bg-panel border border-borderCol rounded-xl p-5 shadow-sm">
+                        <h3 class="text-xs font-bold text-textSec uppercase tracking-wider mb-4 border-b border-borderCol pb-2">JADWAL TAYANG (OPSIONAL)</h3>
+                        <div class="flex flex-col space-y-4">
+                            <div>
+                                <label class="block text-xs font-medium text-textSec mb-1">Tanggal</label>
+                                <input type="date" id="scheduleDate" class="w-full bg-bgMain border border-borderCol rounded-lg px-4 py-3 text-sm focus:border-accent text-textMain shadow-inner outline-none transition-colors color-scheme-dark uppercase tracking-wider">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-textSec mb-1">Waktu</label>
+                                <input type="time" id="scheduleTimeHour" class="w-full bg-bgMain border border-borderCol rounded-lg px-4 py-3 text-sm focus:border-accent text-textMain shadow-inner outline-none transition-colors color-scheme-dark tracking-wider">
+                            </div>
+                        </div>
+                        <button type="button" id="btnClearDate" class="hidden w-full mt-4 text-[var(--error-text)] hover:text-white p-2 rounded-lg transition-colors bg-[var(--error-bg)] hover:bg-red-700 border border-[var(--error-text)] text-sm font-bold flex items-center justify-center gap-2" title="Batal Jadwal">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Batal Jadwal
+                        </button>
                     </div>
-                    <div id="threadsPreview" class="space-y-4">
-                        <div class="text-sm text-textSec italic text-center py-10 border border-dashed border-borderCol rounded-lg flex flex-col items-center gap-2">
-                            <svg class="opacity-50" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                            Ketik sesuatu di editor...
+
+                    <!-- Live Preview Box -->
+                    <div class="bg-panel border border-borderCol rounded-xl p-5 shadow-sm flex-1">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.8)]"></div>
+                            <h3 class="text-xs font-bold text-textSec uppercase tracking-wider">PREVIEW LIVE</h3>
+                        </div>
+                        <div id="threadsPreview" class="space-y-4">
+                            <div class="text-sm text-textSec italic text-center py-10 border border-dashed border-borderCol rounded-lg flex flex-col items-center gap-2">
+                                <svg class="opacity-50" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Ketik sesuatu...
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Action Bar -->
-            <div class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-panel p-5 rounded-xl border border-borderCol shadow-sm">
-                
-                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto relative">
-                    <label class="text-sm font-bold text-textSec shrink-0">Waktu (Opsional):</label>
-                    
-                    <div class="flex items-center gap-2 w-full sm:w-auto">
-                        <input type="date" id="scheduleDate" class="w-full sm:w-[160px] bg-bgMain border border-borderCol rounded-lg px-3 py-2.5 text-sm focus:border-accent text-textMain shadow-inner transition-colors outline-none uppercase tracking-wider" onkeydown="return false">
-                        <input type="time" id="scheduleTimeHour" class="w-full sm:w-[110px] bg-bgMain border border-borderCol rounded-lg px-3 py-2.5 text-sm focus:border-accent text-textMain shadow-inner transition-colors outline-none tracking-wider" onkeydown="return false">
-                        
-                        <button type="button" id="btnClearDate" class="hidden text-[var(--error-text)] hover:text-red-700 p-2 rounded transition-colors bg-[var(--error-bg)] border border-[var(--error-text)] ml-1 shrink-0" title="Batal Jadwal">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="flex w-full sm:w-auto mt-2 sm:mt-0">
-                    <button id="btnPublish" class="w-full sm:w-auto bg-accent hover:bg-accentHover text-white px-8 py-3 sm:py-2.5 rounded-lg font-bold transition-all duration-300 shadow-md flex items-center justify-center gap-2 group cursor-pointer relative overflow-hidden">
-                        <span id="publishBtnIcon" class="flex items-center z-10">
-                            <svg class="group-hover:translate-x-1 transition-transform" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                        </span>
-                        <span id="publishBtnText" class="z-10">Publish</span>
-                    </button>
-                </div>
+            <!-- Publish Button (Full Width Bottom) -->
+            <div class="mt-6 flex justify-end">
+                <button id="btnPublish" class="w-full sm:w-auto bg-accent hover:bg-accentHover text-white px-10 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 text-lg">
+                    <span id="publishBtnIcon" class="flex items-center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></span>
+                    <span id="publishBtnText">Publish Sekarang</span>
+                </button>
             </div>
         </section>
 
         <!-- View: Scheduled & Riwayat -->
         <section id="view-scheduled" class="view-section p-4 md:p-8 w-full max-w-5xl mx-auto hidden">
-            <div class="flex items-center justify-between mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <h2 class="text-2xl font-bold text-textMain tracking-tight">Jadwal & Riwayat</h2>
-                <button onclick="loadScheduledPosts()" class="p-2 text-textSec hover:text-accent transition-colors bg-panel rounded-lg border border-borderCol shadow-sm flex items-center gap-2 text-sm font-bold" title="Refresh Data">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-                    Refresh
-                </button>
+                <!-- Segmented Filter Control -->
+                <div class="flex bg-panel p-1 rounded-lg border border-borderCol shadow-sm">
+                    <button onclick="filterHistory('all')" id="flt-all" class="px-4 py-1.5 text-sm font-bold rounded-md bg-accent text-white filter-btn transition-colors">Semua</button>
+                    <button onclick="filterHistory('today')" id="flt-today" class="px-4 py-1.5 text-sm font-bold rounded-md text-textSec hover:text-textMain filter-btn transition-colors">Hari Ini</button>
+                    <button onclick="filterHistory('month')" id="flt-month" class="px-4 py-1.5 text-sm font-bold rounded-md text-textSec hover:text-textMain filter-btn transition-colors">Bulan Ini</button>
+                </div>
             </div>
-            
-            <div id="scheduledContainer" class="w-full">
-                <!-- Data Jadwal & Riwayat Semua Postingan -->
-            </div>
+            <div id="scheduledContainer" class="w-full"></div>
         </section>
 
         <!-- View: Galeri Media -->
@@ -288,16 +295,13 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <h2 class="text-2xl font-bold text-textMain tracking-tight">Galeri Media</h2>
                 <div class="flex items-center gap-3 flex-wrap">
-                    <select id="mediaSortSelect" class="bg-panel border border-borderCol text-textMain rounded-lg px-3 py-2 text-sm font-bold shadow-sm focus:border-accent outline-none cursor-pointer">
+                    <select id="mediaSortSelect" class="bg-panel border border-borderCol text-textMain rounded-lg px-3 py-2 text-sm font-bold shadow-sm outline-none">
                         <option value="date">Urutkan: Tanggal Upload</option>
                         <option value="size">Urutkan: Ukuran File</option>
                     </select>
-                    <button id="btnSelectAllMedia" class="px-3 py-2 text-textSec bg-bgMain border border-borderCol hover:border-accent hover:text-accent transition-colors rounded-lg text-sm font-bold shadow-sm">
-                        Pilih Semua
-                    </button>
-                    <button id="btnDeleteSelectedMedia" class="hidden px-3 py-2 bg-[var(--error-bg)] text-[var(--error-text)] border border-[var(--error-text)] hover:bg-red-700 hover:text-white transition-colors rounded-lg text-sm font-bold shadow-sm flex items-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-                        Hapus Terpilih (<span id="selectedMediaCount">0</span>)
+                    <button id="btnSelectAllMedia" class="px-3 py-2 text-textSec bg-bgMain border border-borderCol hover:border-accent hover:text-accent rounded-lg text-sm font-bold shadow-sm">Pilih Semua</button>
+                    <button id="btnDeleteSelectedMedia" class="hidden px-3 py-2 bg-[var(--error-bg)] text-[var(--error-text)] border border-[var(--error-text)] hover:bg-red-700 hover:text-white rounded-lg text-sm font-bold shadow-sm flex items-center gap-1">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg> Hapus (<span id="selectedMediaCount">0</span>)
                     </button>
                 </div>
             </div>
@@ -308,28 +312,25 @@
         <section id="view-accounts" class="view-section p-4 md:p-8 w-full max-w-5xl mx-auto hidden">
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-2xl font-bold text-textMain tracking-tight">Status API & Akun</h2>
-                <button onclick="checkAccountStatus()" class="p-2 text-textSec hover:text-accent transition-colors bg-panel rounded-lg border border-borderCol shadow-sm flex items-center gap-2 text-sm font-bold" title="Cek Ulang Status">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-                    Cek Status
+                <button onclick="checkAccountStatus()" class="p-2 text-textSec hover:text-accent bg-panel rounded-lg border border-borderCol shadow-sm flex items-center gap-2 text-sm font-bold">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg> Cek Status
                 </button>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-panel border border-borderCol rounded-xl p-6 shadow-sm group hover:border-accent transition-colors">
+                <div class="bg-panel border border-borderCol rounded-xl p-6 shadow-sm">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-bold text-lg flex items-center gap-3">
-                            <div class="bg-[#1877F2]/10 p-2 rounded-lg text-[#1877F2]"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></div>
-                            Facebook
+                            <div class="bg-[#1877F2]/10 p-2 rounded-lg text-[#1877F2]"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg></div> Facebook
                         </h3>
-                        <span id="statusFb" class="px-2 py-1 border border-[var(--border-col)] text-textSec bg-bgMain text-xs font-bold rounded flex items-center gap-1">Memeriksa...</span>
+                        <span id="statusFb" class="px-2 py-1 border border-borderCol text-textSec bg-bgMain text-xs font-bold rounded flex items-center gap-1">Memeriksa...</span>
                     </div>
                 </div>
-                <div class="bg-panel border border-borderCol rounded-xl p-6 shadow-sm group hover:border-accent transition-colors">
+                <div class="bg-panel border border-borderCol rounded-xl p-6 shadow-sm">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-bold text-lg flex items-center gap-3">
-                            <div class="bg-borderCol/50 p-2 rounded-lg text-textMain"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M16 12v1.5a2.5 2.5 0 0 0 5 0v-1.5a9 9 0 1 0 -5.5 8.28"/></svg></div>
-                            Threads
+                            <div class="bg-borderCol/50 p-2 rounded-lg text-textMain"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M16 12v1.5a2.5 2.5 0 0 0 5 0v-1.5a9 9 0 1 0 -5.5 8.28"/></svg></div> Threads
                         </h3>
-                        <span id="statusThreads" class="px-2 py-1 border border-[var(--border-col)] text-textSec bg-bgMain text-xs font-bold rounded flex items-center gap-1">Memeriksa...</span>
+                        <span id="statusThreads" class="px-2 py-1 border border-borderCol text-textSec bg-bgMain text-xs font-bold rounded flex items-center gap-1">Memeriksa...</span>
                     </div>
                 </div>
             </div>
@@ -340,8 +341,8 @@
 
     <script>
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        let allPostsData = []; 
         
-        // --- SAFE JSON PARSER ---
         function parseSafeJSON(rawText) {
             try { return JSON.parse(rawText); } 
             catch(e) {
@@ -366,26 +367,26 @@
             
             if (isConfirm) {
                 const btnCancel = document.createElement('button');
-                btnCancel.className = 'px-5 py-2.5 rounded-lg font-bold text-textSec bg-bgMain border border-borderCol hover:bg-borderCol transition-colors text-sm';
+                btnCancel.className = 'px-5 py-2.5 rounded-lg font-bold text-textSec bg-bgMain border border-borderCol hover:bg-borderCol text-sm';
                 btnCancel.textContent = 'Batal';
                 btnCancel.onclick = closeModal;
                 actions.appendChild(btnCancel);
                 
                 const btnOk = document.createElement('button');
-                btnOk.className = 'px-5 py-2.5 rounded-lg font-bold text-white bg-[var(--error-text)] hover:bg-red-700 transition-colors shadow-sm text-sm';
+                btnOk.className = 'px-5 py-2.5 rounded-lg font-bold text-white bg-[var(--error-text)] hover:bg-red-700 shadow-sm text-sm';
                 btnOk.textContent = 'Ya, Lanjutkan';
                 btnOk.onclick = () => { closeModal(); if(onConfirm) onConfirm(); };
                 actions.appendChild(btnOk);
             } else {
                 const btnOk = document.createElement('button');
-                btnOk.className = 'px-5 py-2.5 rounded-lg font-bold text-white bg-accent hover:bg-accentHover transition-colors shadow-sm text-sm';
+                btnOk.className = 'px-5 py-2.5 rounded-lg font-bold text-white bg-accent hover:bg-accentHover shadow-sm text-sm';
                 btnOk.textContent = 'OK Mengerti';
                 btnOk.onclick = closeModal;
                 actions.appendChild(btnOk);
             }
 
             modal.classList.remove('hidden');
-            void modal.offsetWidth; // trigger reflow
+            void modal.offsetWidth;
             modal.classList.remove('opacity-0', 'pointer-events-none');
             content.classList.remove('scale-95');
         }
@@ -403,8 +404,8 @@
             const isSuccess = type === 'success';
             toast.className = `px-5 py-3.5 rounded-xl shadow-2xl text-sm font-bold text-white transform translate-y-10 opacity-0 transition-all duration-300 flex items-center gap-3 ${isSuccess ? 'bg-green-600' : 'bg-red-600'}`;
             toast.innerHTML = isSuccess 
-                ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> <span>${msg}</span>` 
-                : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> <span>${msg}</span>`;
+                ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> <span>${msg}</span>` 
+                : `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> <span>${msg}</span>`;
             document.getElementById('toastContainer').appendChild(toast);
             
             requestAnimationFrame(() => toast.classList.remove('translate-y-10', 'opacity-0'));
@@ -412,6 +413,53 @@
                 toast.classList.add('opacity-0', 'scale-95');
                 setTimeout(() => toast.remove(), 300);
             }, 4000);
+        }
+
+        // --- EDIT MODAL LOGIC ---
+        function openEditModal(id, dateVal, timeVal) {
+            const modal = document.getElementById('editScheduleModal');
+            const content = document.getElementById('editScheduleModalContent');
+            document.getElementById('editScheduleId').value = id;
+            document.getElementById('editScheduleDate').value = dateVal;
+            document.getElementById('editScheduleTime').value = timeVal;
+            
+            modal.classList.remove('hidden');
+            void modal.offsetWidth;
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            content.classList.remove('scale-95');
+        }
+
+        function closeEditScheduleModal() {
+            const modal = document.getElementById('editScheduleModal');
+            const content = document.getElementById('editScheduleModalContent');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            content.classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+        }
+
+        async function submitEditSchedule() {
+            const id = document.getElementById('editScheduleId').value;
+            const d = document.getElementById('editScheduleDate').value;
+            const t = document.getElementById('editScheduleTime').value;
+            
+            if(!d || !t) return showToast('Tanggal dan Waktu wajib diisi', 'error');
+
+            const formData = new FormData();
+            formData.append('csrf_token', csrfToken);
+            formData.append('action', 'edit_schedule');
+            formData.append('post_id', id);
+            formData.append('new_date', d);
+            formData.append('new_time', t);
+
+            try {
+                const res = await fetch('api.php', { method: 'POST', body: formData });
+                const data = parseSafeJSON(await res.text());
+                if(data.status === 'success') {
+                    showToast(data.message, 'success');
+                    closeEditScheduleModal();
+                    loadScheduledPosts();
+                } else showModal('Gagal', data.message);
+            } catch(e) { showToast('Kesalahan server', 'error'); }
         }
 
         // --- PLATFORM SELECTOR ---
@@ -429,16 +477,13 @@
                     setTimeout(() => { pMenu.classList.remove('opacity-0', '-translate-y-2'); pArrow.classList.add('rotate-180'); }, 10);
                 } else { closePlatformMenu(); }
             });
-
             document.addEventListener('click', closePlatformMenu);
-
             function closePlatformMenu() {
                 if(!pMenu) return;
                 pMenu.classList.add('opacity-0', '-translate-y-2');
                 pArrow.classList.remove('rotate-180');
                 setTimeout(() => pMenu.classList.add('hidden'), 200);
             }
-
             document.querySelectorAll('.platform-option').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     pInput.value = e.currentTarget.dataset.value;
@@ -454,18 +499,18 @@
         const themeIconContainer = document.getElementById('themeIconContainer');
         const htmlElement = document.documentElement;
 
-        const iconSun = `<svg class="group-hover:text-amber-500 transition-colors" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg> Tema`;
-        const iconMoon = `<svg class="group-hover:text-blue-400 transition-colors" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg> Tema`;
+        const iconSun = `<svg class="group-hover:text-amber-500 transition-colors" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg> Tema`;
+        const iconMoon = `<svg class="group-hover:text-blue-400 transition-colors" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg> Tema`;
 
         function updateThemeLabel() {
             if (!themeLabel) return;
             if (htmlElement.classList.contains('dark')) {
                 themeLabel.textContent = 'GELAP';
-                themeLabel.className = 'text-xs font-bold px-2 py-1 bg-borderCol text-textMain rounded border border-transparent transition-colors';
+                themeLabel.className = 'text-xs font-bold px-2 py-1 bg-borderCol text-textMain rounded border border-transparent';
                 themeIconContainer.innerHTML = iconMoon;
             } else {
                 themeLabel.textContent = 'TERANG';
-                themeLabel.className = 'text-xs font-bold px-2 py-1 bg-bgMain text-textMain rounded border border-borderCol transition-colors';
+                themeLabel.className = 'text-xs font-bold px-2 py-1 bg-bgMain text-textMain rounded border border-borderCol';
                 themeIconContainer.innerHTML = iconSun;
             }
         }
@@ -480,11 +525,11 @@
             });
         }
         
-        // --- SMART BUTTON & WAKTU ---
+        // --- SMART BUTTON & VERTICAL TIME LOGIC ---
         let isTimeError = false;
-        const iconSend = `<svg class="group-hover:translate-x-1 transition-transform" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
-        const iconClock = `<svg class="group-hover:rotate-12 transition-transform" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
-        const iconStop = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+        const iconSend = `<svg class="group-hover:translate-x-1 transition-transform" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
+        const iconClock = `<svg class="group-hover:rotate-12 transition-transform" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+        const iconStop = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
 
         const dateInput = document.getElementById('scheduleDate');
         const timeInput = document.getElementById('scheduleTimeHour');
@@ -507,39 +552,31 @@
 
                     if (scheduledTime <= now) {
                         isTimeError = true;
-                        btnPublish.className = 'w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-8 py-3 sm:py-2.5 rounded-lg font-bold transition-all duration-300 shadow-md flex items-center justify-center gap-2 cursor-not-allowed';
-                        btnIcon.innerHTML = iconStop;
-                        btnText.textContent = 'Time Error';
+                        btnPublish.className = 'w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white px-10 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 text-lg cursor-not-allowed';
+                        btnIcon.innerHTML = iconStop; btnText.textContent = 'Time Error';
                     } else {
                         isTimeError = false;
-                        btnPublish.className = 'w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 sm:py-2.5 rounded-lg font-bold transition-all duration-300 shadow-md flex items-center justify-center gap-2 group cursor-pointer relative overflow-hidden';
-                        btnIcon.innerHTML = iconClock;
-                        btnText.textContent = 'Publish Later';
+                        btnPublish.className = 'w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-10 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 group cursor-pointer text-lg';
+                        btnIcon.innerHTML = iconClock; btnText.textContent = 'Jadwalkan Post';
                     }
                 } else {
                     isTimeError = true;
-                    btnPublish.className = 'w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white px-8 py-3 sm:py-2.5 rounded-lg font-bold transition-all duration-300 shadow-md flex items-center justify-center gap-2 cursor-not-allowed';
-                    btnIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+                    btnPublish.className = 'w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white px-10 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 text-lg cursor-not-allowed';
+                    btnIcon.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
                     btnText.textContent = 'Isi Jam!';
                 }
             } else {
                 clearBtn.classList.add('hidden');
                 isTimeError = false;
-                btnPublish.className = 'w-full sm:w-auto bg-accent hover:bg-accentHover text-white px-8 py-3 sm:py-2.5 rounded-lg font-bold transition-all duration-300 shadow-md flex items-center justify-center gap-2 group cursor-pointer relative overflow-hidden';
-                btnIcon.innerHTML = iconSend;
-                btnText.textContent = 'Publish';
+                btnPublish.className = 'w-full sm:w-auto bg-accent hover:bg-accentHover text-white px-10 py-3 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 group cursor-pointer text-lg';
+                btnIcon.innerHTML = iconSend; btnText.textContent = 'Publish Sekarang';
             }
         }
 
         if (dateInput && timeInput) {
             dateInput.addEventListener('input', checkScheduleState);
             timeInput.addEventListener('input', checkScheduleState);
-            
-            clearBtn.addEventListener('click', () => {
-                dateInput.value = '';
-                timeInput.value = '';
-                checkScheduleState();
-            });
+            clearBtn.addEventListener('click', () => { dateInput.value = ''; timeInput.value = ''; checkScheduleState(); });
         }
 
         // --- SISTEM DINAMIS: CEK STATUS AKUN DB ---
@@ -554,8 +591,8 @@
             try {
                 const res = await fetch('api.php?action=check_accounts&_t=' + Date.now());
                 const data = parseSafeJSON(await res.text());
-                const okHtml = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> OK`;
-                const failHtml = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Belum Terhubung`;
+                const okHtml = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg> OK`;
+                const failHtml = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Belum Terhubung`;
 
                 if(data.status === 'success') {
                     const accounts = data.data;
@@ -568,77 +605,136 @@
             } catch(e) {}
         }
 
-        // --- SISTEM DINAMIS: SEMUA RIWAYAT & JADWAL ---
+        // --- SISTEM DINAMIS: JADWAL & RIWAYAT (DENGAN GROUPING & FILTERING) ---
+        function getDateLabel(dateStr) {
+            const today = new Date();
+            const target = new Date(dateStr);
+            const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const targetDate = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+            const diffDays = Math.round((targetDate - todayDate) / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) return "Hari Ini";
+            if (diffDays === -1) return "Kemarin";
+            if (diffDays === 1) return "Besok";
+            return target.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+
         async function loadScheduledPosts() {
             const container = document.getElementById('scheduledContainer');
             if(!container) return;
-            container.innerHTML = '<div class="text-center py-12"><svg class="animate-spin inline w-8 h-8 text-accent" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg><p class="mt-2 text-textSec text-sm">Memuat data riwayat...</p></div>';
+            container.innerHTML = '<div class="text-center py-12"><svg class="animate-spin inline w-8 h-8 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg><p class="mt-2 text-textSec text-sm">Memuat jadwal...</p></div>';
+            
             try {
                 const res = await fetch('api.php?action=get_posts&_t=' + Date.now());
                 const data = parseSafeJSON(await res.text());
                 if (data.status === 'success') {
-                    const allPosts = data.data; // TAMPILKAN SEMUA TANPA FILTER
-                    if (allPosts.length === 0) {
-                        container.innerHTML = '<div class="bg-panel border border-borderCol rounded-xl p-12 text-center text-textSec flex flex-col items-center justify-center shadow-sm"><svg class="mb-4 text-borderCol w-16 h-16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><p>Tidak ada riwayat atau jadwal saat ini.</p></div>';
-                        return;
-                    }
-                    let html = '<div class="grid grid-cols-1 gap-4">';
-                    allPosts.forEach(p => {
-                        let contentSnippet = p.content;
-                        if(p.platform === 'threads') {
-                            try { const th = JSON.parse(p.content); contentSnippet = th.join(' '); } catch(e){}
-                        }
-                        contentSnippet = contentSnippet.replace(/<[^>]*>?/gm, '');
-                        if(contentSnippet.length > 90) contentSnippet = contentSnippet.substring(0, 90) + '...';
-                        if(!contentSnippet) contentSnippet = '[Lampiran Media]';
-
-                        const platColor = p.platform === 'facebook' ? 'text-[#1877F2] bg-[#1877F2]/10 border-[#1877F2]/20' : 'text-textMain bg-borderCol/50 border-borderCol';
-                        const platName = p.platform.charAt(0).toUpperCase() + p.platform.slice(1);
-                        
-                        let statusBadge = '';
-                        let forceBtn = '';
-                        if(p.status === 'failed') {
-                            statusBadge = '<span class="px-2 py-1 bg-[var(--error-bg)] text-[var(--error-text)] border border-[var(--error-text)] rounded text-[10px] font-bold">GAGAL KIRIM</span>';
-                            forceBtn = `<button onclick="forcePublishPost(${p.id})" class="p-2 sm:p-2.5 text-accent bg-accent/10 hover:bg-accent hover:text-white rounded-lg transition-colors border border-accent shrink-0 flex items-center gap-2 text-xs font-bold" title="Coba Kirim Ulang"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg> Kirim Ulang</button>`;
-                        } else if(p.status === 'scheduled') {
-                            statusBadge = '<span class="px-2 py-1 bg-purple-900/30 text-purple-400 border border-purple-900/50 rounded text-[10px] font-bold tracking-wider">ANTRIAN</span>';
-                            forceBtn = `<button onclick="forcePublishPost(${p.id})" class="p-2 sm:p-2.5 text-accent bg-accent/10 hover:bg-accent hover:text-white rounded-lg transition-colors border border-accent shrink-0 flex items-center gap-2 text-xs font-bold" title="Bypass Jadwal & Kirim Sekarang"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg> Kirim Sekarang</button>`;
-                        } else {
-                            statusBadge = '<span class="px-2 py-1 bg-green-900/30 text-green-400 border border-green-900/50 rounded text-[10px] font-bold tracking-wider">SUKSES</span>';
-                        }
-
-                        const failReason = p.status === 'failed' && p.error_log ? `<div class="mt-2 text-xs text-[var(--error-text)] bg-[var(--error-bg)] p-2 rounded border border-[var(--error-text)]"><b>Error:</b> ${p.error_log}</div>` : '';
-                        const dateText = p.status === 'scheduled' ? `Jadwal: ${p.scheduled_at}` : `Dibuat: ${p.created_at}`;
-
-                        html += `
-                        <div class="bg-panel p-5 rounded-xl border border-borderCol shadow-sm flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                            <div class="flex-1 w-full">
-                                <div class="flex items-center flex-wrap gap-2 mb-2">
-                                    ${statusBadge}
-                                    <span class="px-2 py-1 border ${platColor} text-[10px] font-bold rounded uppercase tracking-wide">${platName}</span>
-                                    <span class="text-xs text-textSec font-bold flex items-center gap-1.5 ml-auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ${dateText}</span>
-                                </div>
-                                <p class="text-sm text-textMain leading-relaxed break-words">${contentSnippet}</p>
-                                ${failReason}
-                            </div>
-                            <div class="flex gap-2 self-end sm:self-center">
-                                ${forceBtn}
-                                <button onclick="deleteScheduledPost(${p.id})" class="p-2 sm:p-2.5 text-[var(--error-text)] bg-[var(--error-bg)] hover:bg-red-700 hover:text-white rounded-lg transition-colors border border-[var(--error-text)] shrink-0" title="Hapus Riwayat">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                </button>
-                            </div>
-                        </div>`;
-                    });
-                    html += '</div>';
-                    container.innerHTML = html;
+                    allPostsData = data.data; // Simpan ke global untuk filter
+                    renderHistory('all');
                 }
             } catch (e) {
-                container.innerHTML = '<div class="bg-[var(--error-bg)] text-[var(--error-text)] p-4 rounded-lg text-center text-sm border border-[var(--error-text)]">Gagal memuat riwayat. Terjadi kesalahan saat menghubungi server.</div>';
+                container.innerHTML = '<div class="bg-[var(--error-bg)] text-[var(--error-text)] p-4 rounded-lg text-center text-sm border border-[var(--error-text)]">Gagal memuat jadwal.</div>';
             }
         }
 
+        window.filterHistory = function(type) {
+            $('.filter-btn').removeClass('bg-accent text-white').addClass('text-textSec hover:text-textMain bg-transparent');
+            $('#flt-'+type).removeClass('text-textSec hover:text-textMain bg-transparent').addClass('bg-accent text-white');
+            renderHistory(type);
+        }
+
+        function renderHistory(filterType) {
+            const container = document.getElementById('scheduledContainer');
+            let filtered = allPostsData;
+            
+            const now = new Date();
+            const currMonth = now.getMonth();
+            const currYear = now.getFullYear();
+            const currDateStr = `${currYear}-${String(currMonth+1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+            if (filterType === 'today') {
+                filtered = allPostsData.filter(p => p.date_raw === currDateStr);
+            } else if (filterType === 'month') {
+                filtered = allPostsData.filter(p => {
+                    let d = new Date(p.date_raw);
+                    return d.getMonth() === currMonth && d.getFullYear() === currYear;
+                });
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="bg-panel border border-borderCol rounded-xl p-12 text-center text-textSec flex flex-col items-center justify-center shadow-sm"><svg class="mb-4 text-borderCol w-16 h-16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><p>Tidak ada riwayat untuk filter ini.</p></div>';
+                return;
+            }
+
+            // GROUPING DATA
+            const groups = {};
+            filtered.forEach(post => {
+                let label = getDateLabel(post.date_raw);
+                if(!groups[label]) groups[label] = [];
+                groups[label].push(post);
+            });
+
+            let html = '';
+            for (const [dateLabel, posts] of Object.entries(groups)) {
+                let labelColor = dateLabel === 'Hari Ini' ? 'text-accent font-bold' : 'text-textSec font-bold';
+                
+                html += `<div class="mb-8"><h3 class="text-xs uppercase tracking-wider mb-4 border-b border-borderCol pb-2 ${labelColor}">${dateLabel}</h3><div class="space-y-4">`;
+
+                posts.forEach(p => {
+                    let contentSnippet = p.content;
+                    if(p.platform === 'threads') {
+                        try { const th = JSON.parse(p.content); contentSnippet = th.join(' '); } catch(e){}
+                    }
+                    contentSnippet = contentSnippet.replace(/<[^>]*>?/gm, '');
+                    if(contentSnippet.length > 90) contentSnippet = contentSnippet.substring(0, 90) + '...';
+                    if(!contentSnippet) contentSnippet = '[Lampiran Media]';
+
+                    const platColor = p.platform === 'facebook' ? 'text-[#1877F2] bg-[#1877F2]/10 border-[#1877F2]/20' : 'text-textMain bg-borderCol/50 border-borderCol';
+                    const platName = p.platform.charAt(0).toUpperCase() + p.platform.slice(1);
+                    
+                    let statusBadge = '';
+                    if (p.status === 'failed') statusBadge = '<span class="px-2 py-1 bg-[var(--error-bg)] text-[var(--error-text)] border border-[var(--error-text)] rounded text-[10px] font-bold">GAGAL</span>';
+                    else if (p.status === 'published') statusBadge = '<span class="px-2 py-1 bg-green-900/30 text-green-400 border border-green-900/50 rounded text-[10px] font-bold">SUKSES TAYANG</span>';
+                    else statusBadge = '<span class="px-2 py-1 bg-purple-900/30 text-purple-400 border border-purple-900/50 rounded text-[10px] font-bold tracking-wider">ANTREAN</span>';
+
+                    const failReason = p.status === 'failed' && p.error_log ? `<div class="mt-2 text-xs text-[var(--error-text)] bg-[var(--error-bg)] p-2 rounded border border-[var(--error-text)]"><b>Error:</b> ${p.error_log}</div>` : '';
+
+                    let actionsHtml = '';
+                    if (p.status === 'scheduled' || p.status === 'failed') {
+                        actionsHtml = `
+                        <div class="flex flex-wrap gap-2 mt-4 pt-3 border-t border-borderCol">
+                            <button onclick="forcePublish(${p.id}, this)" class="px-3 py-1.5 bg-accent hover:bg-accentHover text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center gap-1">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Kirim Sekarang
+                            </button>
+                            <button onclick="openEditModal(${p.id}, '${p.date_raw}', '${p.time_formatted}')" class="px-3 py-1.5 bg-bgMain border border-borderCol hover:border-textSec text-textMain text-xs font-bold rounded-lg transition-colors flex items-center gap-1">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="16 3 21 8 8 21 3 21 3 16 16 3"></polygon></svg> Edit Waktu
+                            </button>
+                        </div>`;
+                    }
+
+                    html += `
+                    <div class="bg-panel p-5 rounded-xl border border-borderCol shadow-sm flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div class="flex-1 w-full">
+                            <div class="flex items-center flex-wrap gap-2 mb-2">
+                                ${statusBadge}
+                                <span class="px-2 py-1 border ${platColor} text-[10px] font-bold rounded uppercase tracking-wide">${platName}</span>
+                                <span class="text-xs text-textSec font-bold flex items-center gap-1.5 ml-auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ${p.time_formatted}</span>
+                            </div>
+                            <p class="text-sm text-textMain leading-relaxed break-words">${contentSnippet}</p>
+                            ${failReason}
+                            ${actionsHtml}
+                        </div>
+                        <button onclick="deleteScheduledPost(${p.id})" class="p-2 sm:p-3 text-[var(--error-text)] bg-[var(--error-bg)] hover:bg-red-700 hover:text-white rounded-lg transition-colors border border-[var(--error-text)] shrink-0 self-end sm:self-center" title="Hapus Jadwal/Riwayat">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </div>`;
+                });
+                html += `</div></div>`;
+            }
+            container.innerHTML = html;
+        }
+
         window.deleteScheduledPost = function(id) {
-            showModal('Hapus Riwayat?', 'Apakah Anda yakin ingin menghapus data postingan ini dari database?', true, async () => {
+            showModal('Hapus Riwayat?', 'Apakah Anda yakin ingin menghapus data dan lampiran medianya secara permanen dari server?', true, async () => {
                 const formData = new FormData();
                 formData.append('csrf_token', csrfToken);
                 formData.append('id', id);
@@ -647,30 +743,43 @@
                     const data = parseSafeJSON(await res.text());
                     if(data.status === 'success') { showToast(data.message); loadScheduledPosts(); } 
                     else { showModal('Gagal', data.message); }
-                } catch(e) { showModal('Error', 'Gagal menghubungi server untuk menghapus.'); }
+                } catch(e) { showModal('Error', 'Gagal menghubungi server.'); }
             });
         }
 
-        // FITUR BARU: FORCE PUBLISH
-        window.forcePublishPost = function(id) {
-            showModal('Kirim Sekarang?', 'Postingan ini akan diabaikan dari antrian jadwal dan langsung dikirim ke Meta detik ini juga. Lanjutkan?', true, async () => {
-                const formData = new FormData();
-                formData.append('csrf_token', csrfToken);
-                formData.append('id', id);
-                formData.append('action', 'force_publish');
-                
-                showToast('🚀 Mengirim permintaan...', 'success');
-                try {
-                    const res = await fetch('api.php', { method: 'POST', body: formData });
-                    const data = parseSafeJSON(await res.text());
-                    if(data.status === 'success') {
-                        // Tembak cron diam-diam di background
-                        fetch('cron.php?secret=EZPost1995')
-                            .then(() => { showToast('✅ Sukses terkirim ke Meta!'); setTimeout(loadScheduledPosts, 1500); })
-                            .catch(() => { showToast('Jadwal sudah diubah ke Sekarang. Menunggu cron jalan.'); loadScheduledPosts(); });
-                    } else { showModal('Gagal', data.message); }
-                } catch(e) { showModal('Error', 'Gagal memproses.'); }
-            });
+        window.forcePublish = async function(id, btnElement) {
+            const oriHtml = btnElement.innerHTML;
+            btnElement.innerHTML = '<svg class="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Memproses...';
+            btnElement.disabled = true;
+
+            const formData = new FormData();
+            formData.append('csrf_token', csrfToken);
+            formData.append('action', 'force_publish');
+            formData.append('post_id', id);
+
+            try {
+                const res = await fetch('api.php', { method: 'POST', body: formData });
+                const data = parseSafeJSON(await res.text());
+                if(data.status === 'success') {
+                    showToast('Jadwal dipercepat, memanggil Cron...');
+                    // Diam-diam trigger cron
+                    fetch('cron.php?secret=EZPost1995').then(() => {
+                        showToast('Sukses dikirim ke Meta!');
+                        loadScheduledPosts();
+                    }).catch(() => {
+                        showModal('Info', 'Postingan sudah dijadwalkan ulang ke detik ini, tetapi cron gagal ditembak. Tunggu cron otomatis dari sistem berjalan.');
+                        loadScheduledPosts();
+                    });
+                } else {
+                    showModal('Gagal', data.message);
+                    btnElement.innerHTML = oriHtml;
+                    btnElement.disabled = false;
+                }
+            } catch(e) {
+                showModal('Error', 'Gagal memproses pengiriman manual.');
+                btnElement.innerHTML = oriHtml;
+                btnElement.disabled = false;
+            }
         }
 
         // --- SISTEM DINAMIS: GALERI MEDIA ---
@@ -742,7 +851,7 @@
                 <div class="relative rounded-xl overflow-hidden border-2 transition-all cursor-pointer group ${isSelected ? 'border-accent shadow-md scale-[0.98]' : 'border-borderCol hover:border-textSec'} bg-bgMain" onclick="toggleSelectMedia('${item.name}')">
                     ${protectionBadge}
                     <div class="absolute top-2 right-2 w-5 h-5 rounded border ${isSelected ? 'bg-accent border-accent text-white' : 'bg-black/30 border-white/50 text-transparent'} flex items-center justify-center transition-colors z-20">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
                     ${visual}
                     <div class="p-2 bg-panel text-xs text-textMain flex justify-between items-center border-t border-borderCol">
@@ -781,7 +890,7 @@
 
         document.getElementById('btnDeleteSelectedMedia')?.addEventListener('click', () => {
             if(selectedMediaIds.size === 0) return;
-            showModal('Hapus File Terpilih?', `Apakah Anda yakin ingin menghapus ${selectedMediaIds.size} file ini secara permanen dari server? (File yang dikunci jadwal akan otomatis dilewati)`, true, async () => {
+            showModal('Hapus File Terpilih?', `Apakah Anda yakin ingin menghapus ${selectedMediaIds.size} file secara permanen dari server? (File yang dikunci jadwal otomatis dilewati)`, true, async () => {
                 const formData = new FormData();
                 formData.append('csrf_token', csrfToken);
                 formData.append('files', JSON.stringify(Array.from(selectedMediaIds)));
@@ -808,6 +917,9 @@
         }
         if(menuBtn) menuBtn.addEventListener('click', toggleMenu);
         if(overlay) overlay.addEventListener('click', toggleMenu);
+
+        // Alias untuk filter history external function (dipanggil dari onclick HTML)
+        const __fHist = window.filterHistory;
 
         document.querySelectorAll('.nav-link').forEach(link => {
             link.addEventListener('click', (e) => {
@@ -882,6 +994,14 @@
                     textarea.value = savedDraft;
                     updateLivePreview();
                     checkDraftState();
+                }
+            }
+            
+            // JQuery fallback untuk syntax onclick jika ada yg tertinggal
+            window.$ = window.jQuery = function(selector) {
+                return {
+                    removeClass: function(c) { document.querySelectorAll(selector).forEach(e => e.classList.remove(...c.split(' '))); return this; },
+                    addClass: function(c) { document.querySelectorAll(selector).forEach(e => e.classList.add(...c.split(' '))); return this; }
                 }
             }
         });
@@ -977,7 +1097,7 @@
             const platform = document.getElementById('platformSelect').value;
             
             if (text.length === 0 && selectedFiles.length === 0) {
-                livePreviewArea.innerHTML = '<div class="text-sm text-textSec italic text-center py-10 border border-dashed border-borderCol rounded-lg flex flex-col items-center gap-2"><svg class="opacity-50" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Ketik sesuatu di editor...</div>';
+                livePreviewArea.innerHTML = '<div class="text-sm text-textSec italic text-center py-10 border border-dashed border-borderCol rounded-lg flex flex-col items-center gap-2"><svg class="opacity-50" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Ketik sesuatu atau tambahkan media...</div>';
                 return;
             }
 
@@ -1043,25 +1163,24 @@
             selectedFiles.forEach(file => formData.append('media[]', file));
 
             const btn = document.getElementById('btnPublish');
-            const btnTextElement = document.getElementById('publishBtnText');
+            const dynamicText = document.getElementById('publishBtnText');
             const oriHtml = btn.innerHTML;
             const oriClasses = btn.className;
 
             let progressInterval;
 
             try {
-                btn.className = 'w-full sm:w-auto bg-gray-500 text-white px-8 py-3 sm:py-2.5 rounded-lg font-bold shadow-md flex items-center justify-center gap-2 cursor-not-allowed opacity-80 transition-all';
+                btn.className = 'w-full sm:w-auto bg-gray-500 text-white px-10 py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 cursor-not-allowed opacity-80 transition-all text-lg';
                 btn.disabled = true;
                 
-                btn.innerHTML = `<span class="flex items-center z-10"><svg class="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></span><span id="publishBtnText" class="z-10 tracking-wider">Memulai...</span>`;
-                const dynamicText = document.getElementById('publishBtnText');
+                btn.innerHTML = `<span class="flex items-center z-10"><svg class="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></span><span id="publishBtnText" class="z-10 tracking-wider">Memulai...</span>`;
 
                 progressInterval = setInterval(async () => {
                     try {
                         let pRes = await fetch('api.php?action=get_progress&_t=' + Date.now());
                         let pData = await parseSafeJSON(await pRes.text());
                         if(pData.status === 'success' && pData.progress) {
-                            dynamicText.textContent = pData.progress;
+                            document.getElementById('publishBtnText').textContent = pData.progress;
                         }
                     } catch(e){}
                 }, 1500);
@@ -1072,7 +1191,7 @@
                 
                 let data;
                 try { data = parseSafeJSON(rawText); } 
-                catch (parseError) { throw new Error('Server PHP memunculkan Error rahasia.'); }
+                catch (parseError) { throw new Error('Server PHP memunculkan Error.'); }
 
                 if (data.status === 'success') {
                     showToast(data.message, 'success');
@@ -1090,7 +1209,7 @@
                 }
             } catch (err) {
                 if(progressInterval) clearInterval(progressInterval);
-                showModal('Koneksi Putus', 'Server memutus sambungan. Penyebab utama:\n1. Video/Gambar melebihi batas.\n2. Proses memakan waktu > 60 detik (Timeout).');
+                showModal('Koneksi Putus', 'Server memutus sambungan karena Timeout.');
             } finally {
                 btn.innerHTML = oriHtml;
                 btn.className = oriClasses;
