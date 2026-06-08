@@ -1,5 +1,5 @@
 <?php
-// Pastikan session dimulai untuk keamanan
+// Pastikan session dimulai di awal
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -19,13 +19,15 @@ $action = $_POST['action'] ?? '';
 if ($action !== 'login') {
     verify_csrf();
     if (!is_logged_in()) {
-        echo json_encode(['status' => 'error', 'message' => 'Unauthorized. Sesi habis, silakan refresh halaman.']);
+        echo json_encode(['status' => 'error', 'message' => 'Sesi habis, silakan refresh halaman untuk login kembali.']);
         exit;
     }
 }
 
 try {
-    // --- 1. FUNGSI LOGIN ---
+    // ==========================================
+    // 1. FUNGSI LOGIN
+    // ==========================================
     if ($action === 'login') {
         $email = $_POST['email'] ?? '';
         $password = $_POST['password'] ?? '';
@@ -35,11 +37,10 @@ try {
         $user = $stmt->fetch();
         
         if ($user) {
-            // Verifikasi password (dukungan plain text untuk setup pertama)
             if (password_verify($password, $user['password_hash']) || $password === $user['password_hash']) {
                 $_SESSION['user_id'] = $user['id'];
                 
-                // Jika masih plain text, enkripsi sekarang agar aman
+                // Ubah plain text ke hash jika masih plain
                 if ($password === $user['password_hash']) {
                     $newHash = password_hash($password, PASSWORD_DEFAULT);
                     $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?")->execute([$newHash, $user['id']]);
@@ -53,7 +54,9 @@ try {
         exit;
     }
 
-    // --- 2. FUNGSI CEK STATUS AKUN ---
+    // ==========================================
+    // 2. FUNGSI CEK STATUS AKUN
+    // ==========================================
     if ($action === 'check_status') {
         $stmt = $pdo->prepare("SELECT provider FROM social_accounts WHERE user_id = ?");
         $stmt->execute([$_SESSION['user_id']]);
@@ -67,20 +70,20 @@ try {
         exit;
     }
 
-    // --- 3. FUNGSI JADWALKAN POSTINGAN (MULTIPLEXING) ---
+    // ==========================================
+    // 3. FUNGSI JADWALKAN POSTINGAN
+    // ==========================================
     if ($action === 'save_post') {
         $platform_mode = $_POST['platform'] ?? 'fb_threads_nomedia';
         $content = $_POST['content'] ?? '';
         $scheduled_at = $_POST['scheduled_at'] ?? null;
         
-        // Handling Tanggal (Otomatis ke NOW jika kosong)
         if (empty(trim($scheduled_at))) {
             $scheduled_at = date('Y-m-d H:i:s');
         } else {
             $scheduled_at = date('Y-m-d H:i:s', strtotime($scheduled_at));
         }
 
-        // Tentukan Target Platform
         $targets = [];
         if ($platform_mode === 'facebook') {
             $targets[] = ['plat' => 'facebook', 'media' => true];
@@ -94,7 +97,6 @@ try {
             $targets[] = ['plat' => 'threads', 'media' => false];
         }
 
-        // Proses Upload Media Sekali
         $uploaded_files = [];
         if (!empty($_FILES['media']['name'][0])) {
             $upload_dir = '/var/www/html/uploads/';
@@ -113,7 +115,6 @@ try {
             }
         }
 
-        // Simpan ke Database
         $pdo->beginTransaction();
         try {
             foreach ($targets as $target) {
@@ -129,7 +130,7 @@ try {
                 }
             }
             $pdo->commit();
-            echo json_encode(['status' => 'success', 'message' => 'Postingan berhasil masuk antrean!']);
+            echo json_encode(['status' => 'success', 'message' => 'Postingan berhasil disimpan & masuk antrean!']);
         } catch (Exception $e) {
             $pdo->rollBack();
             echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan: ' . $e->getMessage()]);
@@ -137,8 +138,11 @@ try {
         exit;
     }
 
-    // --- 4. FUNGSI AMBIL RIWAYAT & JADWAL ---
+    // ==========================================
+    // 4. FUNGSI AMBIL RIWAYAT & JADWAL
+    // ==========================================
     if ($action === 'get_history') {
+        // Ambil SEMUA data (Sukses, Antrean, Gagal) urut dari yg paling baru
         $stmt = $pdo->prepare("SELECT * FROM posts WHERE user_id = ? ORDER BY scheduled_at DESC, created_at DESC");
         $stmt->execute([$_SESSION['user_id']]);
         $posts = $stmt->fetchAll();
@@ -150,6 +154,8 @@ try {
             
             $post['scheduled_date_raw'] = date('Y-m-d', $time);
             $post['scheduled_time_raw'] = date('H:i', $time);
+            // Format waktu standar utk modal edit
+            $post['scheduled_at'] = date('Y-m-d H:i', $time);
             $valid_posts[] = $post;
         }
 
@@ -157,7 +163,9 @@ try {
         exit;
     }
 
-    // --- 5. FUNGSI PAKSA TAYANG (FORCE PUBLISH) ---
+    // ==========================================
+    // 5. FUNGSI PAKSA TAYANG (KIRIM SEKARANG)
+    // ==========================================
     if ($action === 'force_publish') {
         $post_id = (int)$_POST['post_id'];
         $stmt = $pdo->prepare("UPDATE posts SET scheduled_at = NOW(), status = 'scheduled' WHERE id = ? AND user_id = ?");
@@ -166,13 +174,15 @@ try {
         exit;
     }
 
-    // --- 6. FUNGSI EDIT JADWAL ---
+    // ==========================================
+    // 6. FUNGSI EDIT JADWAL
+    // ==========================================
     if ($action === 'edit_schedule') {
         $post_id = (int)$_POST['post_id'];
         $new_datetime = $_POST['new_datetime'] ?? '';
         
         if (empty($new_datetime)) {
-            echo json_encode(['status' => 'error', 'message' => 'Waktu wajib diisi!']);
+            echo json_encode(['status' => 'error', 'message' => 'Waktu tidak boleh kosong!']);
             exit;
         }
 
@@ -180,22 +190,24 @@ try {
         $stmt = $pdo->prepare("UPDATE posts SET scheduled_at = ?, status = 'scheduled' WHERE id = ? AND user_id = ?");
         $stmt->execute([$scheduled_at, $post_id, $_SESSION['user_id']]);
 
-        echo json_encode(['status' => 'success', 'message' => 'Waktu tayang berhasil diubah!']);
+        echo json_encode(['status' => 'success', 'message' => 'Waktu tayang berhasil diperbarui!']);
         exit;
     }
 
-    // --- 7. FUNGSI HAPUS POSTINGAN ---
+    // ==========================================
+    // 7. FUNGSI HAPUS POSTINGAN
+    // ==========================================
     if ($action === 'delete_post') {
         $post_id = (int)$_POST['post_id'];
         
-        // Hapus medianya dulu (optional, tapi disarankan)
+        // Hapus medianya dulu dari database
         $pdo->prepare("DELETE FROM post_media WHERE post_id = ?")->execute([$post_id]);
         
-        // Hapus post-nya
+        // Hapus post
         $stmt = $pdo->prepare("DELETE FROM posts WHERE id = ? AND user_id = ?");
         $stmt->execute([$post_id, $_SESSION['user_id']]);
         
-        echo json_encode(['status' => 'success', 'message' => 'Postingan berhasil dihapus selamanya.']);
+        echo json_encode(['status' => 'success', 'message' => 'Postingan berhasil dihapus permanen.']);
         exit;
     }
 
