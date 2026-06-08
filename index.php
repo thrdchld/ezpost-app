@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EZPost Enterprise</title>
+    <title>EZPost Publish Planner</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -34,13 +34,7 @@
 </head>
 <body class="antialiased font-sans">
 
-<!-- ICONS (Aman Tidak Akan Hilang) -->
-<svg style="display: none;">
-    <symbol id="icon-fb" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></symbol>
-    <symbol id="icon-threads" viewBox="0 0 24 24"><path d="M16.711 13.333c-0.198 1.401-1.037 3.237-2.934 3.237-1.498 0-2.483-1.077-2.483-2.616v-2.071c0-1.579 0.999-2.665 2.528-2.665 1.758 0 2.639 1.589 2.766 2.871h1.996c-0.218-2.222-1.905-4.571-4.762-4.571-2.645 0-4.582 1.872-4.582 4.417v2.019c0 2.502 1.87 4.364 4.509 4.364 2.876 0 4.607-2.235 4.887-4.985h-1.925z M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.666 12.06c0 3.398-2.158 5.76-5.59 5.76-3.415 0-5.632-2.316-5.632-5.717v-1.993c0-3.428 2.22-5.761 5.645-5.761 3.266 0 5.485 2.193 5.568 5.43h-2.029c-0.106-2.122-1.512-3.593-3.539-3.593-2.195 0-3.593 1.487-3.593 3.924v1.993c0 2.392 1.385 3.882 3.58 3.882 2.217 0 3.6-1.554 3.6-4.004h1.99z"/></symbol>
-</svg>
-
-<!-- TOAST -->
+<!-- TOAST NOTIFICATION -->
 <div id="toast" class="fixed top-5 right-5 z-50 transform transition-all duration-300 translate-x-full opacity-0">
     <div class="bg-gray-800 text-white border-l-4 border-blue-500 shadow-2xl p-4 rounded flex items-center gap-3">
         <span id="toastIcon">💡</span><span id="toastMsg" class="font-medium">Notifikasi</span>
@@ -52,11 +46,11 @@
     <!-- HEADER -->
     <?php if (is_logged_in()): ?>
     <div class="flex justify-between items-center mb-6 border-b border-darkborder pb-4">
-        <h1 class="text-2xl font-bold text-white tracking-wide">EZPOST PLANNER</h1>
+        <h1 class="text-2xl font-bold text-white tracking-wide">🚀 EZPOST</h1>
         <div class="flex gap-4">
             <button onclick="switchTab('post')" id="tabBtn-post" class="px-5 py-2 font-semibold text-sm rounded-lg bg-blue-600 text-white transition-all">Tulis Baru</button>
             <button onclick="switchTab('history')" id="tabBtn-history" class="px-5 py-2 font-semibold text-sm rounded-lg text-gray-400 hover:text-white transition-all">Planner Jadwal</button>
-            <button onclick="logout()" class="px-4 py-2 font-semibold text-sm text-red-400 border border-red-900 rounded-lg">Keluar</button>
+            <button onclick="logout()" class="px-4 py-2 font-semibold text-sm text-red-400 border border-red-900 rounded-lg hover:bg-red-900/30">Keluar</button>
         </div>
     </div>
     <?php endif; ?>
@@ -68,9 +62,15 @@
             <h3 class="text-xl font-bold text-center text-white mb-6">Login ke Sistem</h3>
             <form id="loginForm" class="space-y-4">
                 <input type="hidden" name="action" value="login">
-                <div><label class="text-sm text-gray-400">Email</label><input type="email" name="email" required class="w-full mt-1 px-4 py-2 bg-[#0d1117] border border-gray-600 rounded text-white outline-none focus:border-blue-500"></div>
-                <div><label class="text-sm text-gray-400">Password</label><input type="password" name="password" required class="w-full mt-1 px-4 py-2 bg-[#0d1117] border border-gray-600 rounded text-white outline-none focus:border-blue-500"></div>
-                <button type="submit" id="btnLogin" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded mt-4">Masuk</button>
+                <div>
+                    <label class="text-sm text-gray-400">Email</label>
+                    <input type="email" name="email" required class="w-full mt-1 px-4 py-2 bg-[#0d1117] border border-gray-600 rounded text-white outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="text-sm text-gray-400">Password</label>
+                    <input type="password" name="password" required class="w-full mt-1 px-4 py-2 bg-[#0d1117] border border-gray-600 rounded text-white outline-none focus:border-blue-500">
+                </div>
+                <button type="submit" id="btnLogin" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded mt-4 transition-all">Masuk</button>
             </form>
         </div>
     </div>
@@ -99,21 +99,21 @@
                         </div>
                         
                         <div>
-                            <label class="block text-sm font-semibold text-gray-300 mb-2 flex justify-between">
-                                <span>Tulis konten...</span>
-                                <button type="button" onclick="clearDraft()" class="text-xs text-red-400 hover:underline font-normal">Hapus Draft</button>
-                            </label>
+                            <div class="flex justify-between items-end mb-2">
+                                <label class="block text-sm font-semibold text-gray-300">Tulis konten...</label>
+                                <button type="button" onclick="clearDraft()" class="text-xs text-red-400 hover:underline">Hapus Draf</button>
+                            </div>
                             <textarea name="content" id="input_content" rows="6" placeholder="Ketik ide brilian Anda di sini..." required class="w-full px-4 py-3 bg-[#0d1117] border border-darkborder rounded-lg text-white resize-none outline-none focus:border-blue-500"></textarea>
                         </div>
 
                         <div>
                             <label class="block text-sm font-semibold text-gray-300 mb-2">Lampiran Media</label>
-                            <input type="file" name="media[]" id="input_media" multiple accept="image/*,video/*" class="w-full px-4 py-2 bg-[#0d1117] border border-darkborder rounded-lg text-gray-300 cursor-pointer">
+                            <input type="file" name="media[]" id="input_media" multiple accept="image/*,video/*" class="w-full px-4 py-2 bg-[#0d1117] border border-darkborder rounded-lg text-gray-300 cursor-pointer file:mr-4 file:py-1 file:px-4 file:rounded file:border-0 file:text-sm file:bg-gray-700 file:text-white hover:file:bg-gray-600">
                         </div>
 
                         <!-- FLATPICKR JADWAL TAYANG -->
                         <div class="pt-5 border-t border-darkborder">
-                            <h4 class="text-sm font-semibold text-gray-300 mb-3">Jadwal Tayang (Klik & Pilih)</h4>
+                            <h4 class="text-sm font-semibold text-gray-300 mb-3">Jadwal Tayang (Klik untuk pilih waktu)</h4>
                             <input type="text" id="input_datetime" name="scheduled_at" placeholder="Kosongkan untuk publish Detik Ini Juga" class="w-full px-4 py-3 bg-[#0d1117] border border-gray-600 rounded-lg text-white outline-none focus:border-blue-500 cursor-pointer text-center font-bold">
                         </div>
                     </form>
@@ -185,11 +185,11 @@
 
 <!-- MODAL EDIT JADWAL -->
 <div id="editModal" class="fixed inset-0 bg-black/80 z-50 hidden flex justify-center items-center opacity-0 transition-opacity duration-300">
-    <div class="bg-darkcard border border-darkborder w-full max-w-sm rounded-xl p-6 shadow-2xl">
+    <div class="bg-darkcard border border-darkborder w-full max-w-sm rounded-xl p-6 shadow-2xl transform scale-95 transition-transform duration-300">
         <h3 class="text-lg font-bold text-white mb-4">Ubah Waktu Tayang</h3>
         <form id="editScheduleForm" class="space-y-4">
             <input type="hidden" id="edit_post_id">
-            <input type="text" id="edit_datetime" required class="w-full px-4 py-3 bg-[#0d1117] border border-gray-600 rounded text-white text-center font-bold outline-none focus:border-blue-500">
+            <input type="text" id="edit_datetime" required class="w-full px-4 py-3 bg-[#0d1117] border border-gray-600 rounded text-white text-center font-bold outline-none cursor-pointer">
             <div class="pt-4 flex gap-3">
                 <button type="button" onclick="closeEditModal()" class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded font-medium">Batal</button>
                 <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-medium">Simpan</button>
@@ -200,12 +200,12 @@
 
 <script>
 // ==========================================
-// INISIALISASI UTAMA & SCRIPT LOGIN KEBUL
+// INISIALISASI & SCRIPT LOGIN KEBUL
 // ==========================================
 const csrfToken = $('#csrf_token').val() || '';
 
-// Script Login dipisah di atas agar kebal dari error UI lain
 $(document).ready(function() {
+    // SCRIPT LOGIN
     if ($('#loginForm').length > 0) {
         $('#loginForm').submit(function(e) {
             e.preventDefault();
@@ -221,22 +221,24 @@ $(document).ready(function() {
         });
     }
 
-    // Jika user sudah login, jalankan fitur UI canggih
+    // JIKA USER SUDAH LOGIN, INIT DASHBOARD
     if ($('#postForm').length > 0) {
         initUI();
     }
 });
 
 // ==========================================
-// FUNGSI DASHBOARD (Dijalankan hanya jika login)
+// FUNGSI DASHBOARD & UI
 // ==========================================
 let allPosts = []; 
 let currentCalDate = new Date();
 let selectedDateStr = "";
+let fpEditInstance = null; // Instance flatpickr untuk modal edit
 
 function initUI() {
     // 1. Inisialisasi Flatpickr
-    flatpickr("#input_datetime", { enableTime: true, dateFormat: "Y-m-d H:i", time_24hr: true });
+    flatpickr("#input_datetime", { enableTime: true, dateFormat: "Y-m-d H:i", time_24hr: true, minDate: "today" });
+    fpEditInstance = flatpickr("#edit_datetime", { enableTime: true, dateFormat: "Y-m-d H:i", time_24hr: true, minDate: "today" });
     
     // 2. Draft Auto-Save
     if(localStorage.getItem('ezpost_draft')) $('#input_content').val(localStorage.getItem('ezpost_draft'));
@@ -252,7 +254,7 @@ function initUI() {
     for(let i = currYr - 1; i <= currYr + 2; i++) ySel.append(`<option value="${i}">${i}</option>`);
     goToToday();
 
-    // 5. Submit Form
+    // 5. Submit Form Postingan
     $('#postForm').submit(async function(e) {
         e.preventDefault();
         let btn = $('#btnSubmitPost'); let ori = btn.html();
@@ -264,37 +266,14 @@ function initUI() {
             if(res.status === 'success') {
                 $('#postForm')[0].reset(); clearDraft();
                 $('#input_platform').val('fb_threads_nomedia').trigger('change');
-                flatpickr("#input_datetime", { enableTime: true, dateFormat: "Y-m-d H:i", time_24hr: true }).clear();
+                flatpickr("#input_datetime", { enableTime: true, dateFormat: "Y-m-d H:i", time_24hr: true, minDate: "today" }).clear();
                 updatePreview(); loadAllHistory();
             }
-        } catch(e) { showToast("Gagal terhubung ke API.", "error"); }
+        } catch(e) { showToast("Gagal terhubung ke server.", "error"); }
         finally { btn.prop('disabled', false).html(ori); }
     });
 
-    // 6. Action Buttons Timeline (Kirim, Edit, Hapus)
-    $(document).on('click', '.timeline-action', async function() {
-        let btn = $(this); let action = btn.data('act'); let pid = btn.data('id');
-        
-        if (action === 'delete') {
-            if(!confirm("Yakin ingin menghapus postingan ini selamanya?")) return;
-            btn.html('⏳').prop('disabled', true);
-            $.post('api.php', { action: 'delete_post', post_id: pid, csrf_token: csrfToken }, function(res) {
-                showToast(res.message, res.status); loadAllHistory();
-            }, 'json');
-            return;
-        }
-
-        if (action === 'force') {
-            btn.html('⏳').prop('disabled', true);
-            $.post('api.php', { action: 'force_publish', post_id: pid, csrf_token: csrfToken }, function(res) {
-                showToast("Memaksa dikirim detik ini...", "success");
-                $.get('cron.php?secret=EZPost1995').always(() => loadAllHistory());
-            }, 'json');
-            return;
-        }
-    });
-
-    // 7. Edit Schedule Submit
+    // 6. Submit Modal Edit Jadwal
     $('#editScheduleForm').submit(function(e) {
         e.preventDefault();
         let pid = $('#edit_post_id').val(); let dt = $('#edit_datetime').val();
@@ -321,21 +300,30 @@ function updatePreview() {
     if(isTh) tabs += `<button class="prev-tab-btn px-4 py-2 font-bold text-sm border-b-2 ${!isFb ? 'border-white text-white' : 'border-transparent text-gray-500'}" onclick="showTab(this, 'th')">Threads</button>`;
     $('#previewTabsContainer').html(tabs);
 
-    let mb = hasMedia ? `<div class="w-full h-32 bg-gray-800 rounded mt-3 flex justify-center items-center text-xs text-gray-400">📸 Media Terlampir</div>` : '';
+    let mb = hasMedia ? `<div class="w-full h-32 bg-gray-800 rounded mt-3 flex justify-center items-center text-xs text-gray-400">📸 Ada Lampiran Media</div>` : '';
     let thMb = (hasMedia && plat !== 'fb_threads_nomedia') ? mb : '';
 
-    // UI Facebook Asli
+    // UI Facebook
     let fbHtml = `<div id="prev-fb" class="prev-content ${isFb ? 'block' : 'hidden'}">
-        <div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 rounded-full bg-blue-600"></div><div><div class="font-bold text-sm text-gray-200">Halaman Facebook Anda</div><div class="text-xs text-gray-500">Baru saja · 🌎</div></div></div>
+        <div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 rounded-full bg-blue-600"></div><div><div class="font-bold text-sm text-gray-200">Facebook Page Anda</div><div class="text-xs text-gray-500">Baru saja · 🌎</div></div></div>
         <div class="text-sm text-gray-100 whitespace-pre-wrap">${content}</div>${mb}
         <div class="flex justify-between border-t border-gray-700 mt-4 pt-2 text-gray-400 text-xs font-bold px-4"><span>👍 Suka</span><span>💬 Komentar</span><span>↪️ Bagikan</span></div>
     </div>`;
 
-    // UI Threads Asli
+    // UI Threads (Desain Autentik dengan garis vertikal)
     let thHtml = `<div id="prev-th" class="prev-content ${!isFb ? 'block' : 'hidden'}">
-        <div class="flex gap-3"><div class="flex flex-col items-center"><div class="w-10 h-10 rounded-full bg-gray-600 z-10"></div><div class="w-0.5 bg-gray-700 h-full mt-2"></div></div>
-        <div class="pb-4 w-full"><div class="font-bold text-sm text-gray-200">@username_threads</div><div class="text-sm text-gray-100 mt-1 whitespace-pre-wrap">${content}</div>${thMb}
-        <div class="flex gap-4 mt-4 text-gray-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 8 9 8z"></path></svg><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg></div></div></div>
+        <div class="flex gap-3">
+            <div class="flex flex-col items-center"><div class="w-10 h-10 rounded-full bg-gray-600 z-10 flex-shrink-0"></div><div class="w-0.5 bg-gray-700 h-full mt-2"></div></div>
+            <div class="pb-4 w-full">
+                <div class="font-bold text-sm text-white">@username_threads</div>
+                <div class="text-sm text-gray-200 mt-1 whitespace-pre-wrap">${content}</div>${thMb}
+                <div class="flex gap-4 mt-3 text-gray-500">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 8 9 8z"></path></svg>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                </div>
+            </div>
+        </div>
     </div>`;
 
     $('#previewContentContainer').html(fbHtml + thHtml);
@@ -348,7 +336,7 @@ function showTab(btn, target) {
 }
 
 // ==========================================
-// KALENDER & TIMELINE
+// KALENDER & TIMELINE PLANNER
 // ==========================================
 function loadAllHistory() {
     $.post('api.php', { action: 'get_history', csrf_token: csrfToken }, function(res) {
@@ -399,6 +387,7 @@ function renderTimeline() {
     let dObj = new Date(selectedDateStr);
     $('#timeline-header').html(`Jadwal: ${dObj.toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'})}`);
 
+    // Dapatkan data untuk tanggal terpilih
     let filtered = allPosts.filter(p => {
         return (p.scheduled_date_raw === selectedDateStr) && 
                (fStat === 'all' || p.status === fStat) && 
@@ -407,25 +396,25 @@ function renderTimeline() {
 
     let html = '';
     if(filtered.length === 0) {
-        html = `<div class="text-center py-10 bg-[#0d1117] rounded border border-darkborder border-dashed text-gray-500">Tidak ada jadwal yang cocok.</div>`;
+        html = `<div class="text-center py-10 bg-[#0d1117] rounded border border-darkborder border-dashed text-gray-500">Tidak ada jadwal pada tanggal ini.</div>`;
     } else {
         filtered.forEach(post => {
-            // Deteksi Status
+            // Label Status
             let bInfo = { bg: 'bg-gray-800', text: 'UNKNOWN' };
             if (post.status === 'published') bInfo = { bg: 'bg-emerald-900/40 text-emerald-400 border border-emerald-800', text: 'PUBLISHED' };
             else if (post.status === 'failed') bInfo = { bg: 'bg-red-900/40 text-red-400 border border-red-800', text: 'FAILED' };
             else if (post.status === 'scheduled') bInfo = { bg: 'bg-blue-900/40 text-blue-400 border border-blue-800', text: 'SCHEDULED' };
 
-            let pIcon = post.platform === 'facebook' ? '#icon-fb' : '#icon-threads';
+            let pName = post.platform.toUpperCase();
             let errHtml = post.error_log ? `<div class="mt-3 p-2 text-xs bg-red-950 text-red-300 rounded font-mono">${post.error_log}</div>` : '';
             
-            // Render 3 Tombol Aksi jika Gagal/Antre
+            // TOMBOL AKSI HANYA UNTUK ANTRE & GAGAL
             let btnHtml = '';
             if(post.status === 'scheduled' || post.status === 'failed') {
-                btnHtml = `<div class="mt-4 flex gap-2">
-                    <button class="timeline-action px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded" data-act="force" data-id="${post.id}">🚀 Publish Sekarang</button>
-                    <button class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-xs rounded border border-gray-600" onclick="openEditModal(${post.id}, '${post.scheduled_at}')">✏️ Ubah Waktu</button>
-                    <button class="timeline-action px-3 py-1.5 bg-red-900/30 hover:bg-red-900 text-red-400 hover:text-white text-xs rounded border border-red-900/50" data-act="delete" data-id="${post.id}">🗑️ Hapus</button>
+                btnHtml = `<div class="mt-4 flex flex-wrap gap-2 pt-3 border-t border-gray-700">
+                    <button class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded" onclick="forcePublish(${post.id})">🚀 Kirim Sekarang</button>
+                    <button class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded" onclick="openEditModal(${post.id}, '${post.scheduled_at}')">✏️ Ubah Jadwal</button>
+                    <button class="px-3 py-1.5 bg-red-900/50 hover:bg-red-800 text-red-400 text-xs rounded border border-red-800" onclick="deletePost(${post.id})">🗑️ Hapus</button>
                 </div>`;
             }
 
@@ -438,7 +427,7 @@ function renderTimeline() {
                 <div class="border-l border-darkborder pl-4 w-full">
                     <div class="flex justify-between items-start mb-2">
                         <span class="px-2 py-0.5 text-[10px] font-bold rounded ${bInfo.bg}">${bInfo.text}</span>
-                        <svg class="w-5 h-5 text-gray-400 fill-current"><use href="${pIcon}"></use></svg>
+                        <span class="text-xs text-gray-500 font-bold">${pName}</span>
                     </div>
                     <p class="text-sm text-gray-300 whitespace-pre-wrap">${post.content}</p>
                     ${errHtml}
@@ -451,7 +440,25 @@ function renderTimeline() {
 }
 
 // ==========================================
-// UTILITIES (Tab, Modal, Toast)
+// FUNGSI AKSI POSTINGAN (Kirim, Ubah, Hapus)
+// ==========================================
+function forcePublish(pid) {
+    showToast("Memaksa dipublish detik ini...", "success");
+    $.post('api.php', { action: 'force_publish', post_id: pid, csrf_token: csrfToken }, function(res) {
+        $.get('cron.php?secret=EZPost1995').always(() => loadAllHistory());
+    }, 'json');
+}
+
+function deletePost(pid) {
+    if(!confirm("Yakin ingin menghapus postingan ini selamanya?")) return;
+    $.post('api.php', { action: 'delete_post', post_id: pid, csrf_token: csrfToken }, function(res) {
+        showToast(res.message, res.status);
+        if(res.status === 'success') loadAllHistory();
+    }, 'json');
+}
+
+// ==========================================
+// UTILITIES (Modal, Tab, Toast)
 // ==========================================
 function switchTab(tabId) {
     $('#tab-post, #tab-history').addClass('hidden');
@@ -463,12 +470,19 @@ function switchTab(tabId) {
 
 function clearDraft() { localStorage.removeItem('ezpost_draft'); $('#input_content').val(''); updatePreview(); }
 
-function openEditModal(pid, fulltime) {
+function openEditModal(pid, defaultTimeStr) {
     $('#edit_post_id').val(pid);
-    let fp = flatpickr("#edit_datetime", { enableTime: true, dateFormat: "Y-m-d H:i", time_24hr: true, defaultDate: fulltime });
-    $('#editModal').removeClass('hidden').removeClass('opacity-0');
+    fpEditInstance.setDate(defaultTimeStr);
+    let modal = $('#editModal');
+    modal.removeClass('hidden');
+    setTimeout(() => { modal.removeClass('opacity-0').children().removeClass('scale-95'); }, 10);
 }
-function closeEditModal() { $('#editModal').addClass('hidden opacity-0'); }
+
+function closeEditModal() {
+    let modal = $('#editModal');
+    modal.addClass('opacity-0').children().addClass('scale-95');
+    setTimeout(() => { modal.addClass('hidden'); }, 300);
+}
 
 function showToast(msg, type='info') {
     let t = $('#toast'); let b = t.find('div'); let i = $('#toastIcon');
