@@ -8,6 +8,12 @@
     <meta name="csrf-token" content="<?php echo $_SESSION['csrf_token']; ?>">
     
     <script>
+        // Tangkap semua error global agar tidak mati diam-diam
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            alert("SYSTEM CRASH!\nSilakan Hard Refresh (CTRL+F5).\nError: " + msg);
+            return false;
+        };
+
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
         } else {
@@ -195,24 +201,20 @@
                     </button>
                     
                     <div id="platformMenu" class="hidden absolute top-full left-0 mt-2 w-full bg-panel border border-borderCol rounded-lg shadow-xl overflow-hidden opacity-0 transform -translate-y-2 transition-all duration-200">
-                        <!-- Pilihan 1: Facebook Saja -->
                         <button type="button" class="platform-option w-full text-left px-4 py-3 hover:bg-bgMain flex items-center gap-3 transition-colors" data-value="facebook">
                             <span class="font-mono font-bold text-[#1877F2]">[FB]</span><span class="font-medium text-sm">Facebook saja</span>
                         </button>
-                        <!-- Pilihan 2: Threads Saja -->
                         <button type="button" class="platform-option w-full text-left px-4 py-3 hover:bg-bgMain border-t border-borderCol flex items-center gap-3 transition-colors" data-value="threads">
                             <span class="font-mono font-bold text-textMain">[TH]</span><span class="font-medium text-sm">Threads saja</span>
                         </button>
-                        <!-- Pilihan 3: Keduanya (Full Media) -->
                         <button type="button" class="platform-option w-full text-left px-4 py-3 hover:bg-bgMain border-t border-borderCol flex items-center gap-3 transition-colors" data-value="fb_threads_media">
                             <span class="font-mono font-bold text-purple-500">[++]</span><span class="font-medium text-sm">FB + TH (Keduanya Media)</span>
                         </button>
-                        <!-- Pilihan 4: Keduanya (Threads Teks Saja) - DEFAULT -->
                         <button type="button" class="platform-option w-full text-left px-4 py-3 hover:bg-bgMain border-t border-borderCol flex items-center gap-3 transition-colors bg-borderCol/20" data-value="fb_threads_nomedia">
                             <span class="font-mono font-bold text-accent">[+T]</span><span class="font-medium text-sm">FB + TH (TH Teks Saja)</span>
                         </button>
                     </div>
-                    <input type="hidden" id="platformSelect" value="fb_threads_nomedia"> <!-- Set value default -->
+                    <input type="hidden" id="platformSelect" value="fb_threads_nomedia">
                 </div>
             </div>
 
@@ -273,7 +275,6 @@
                 </button>
             </div>
             
-            <!-- Filters -->
             <div class="flex flex-wrap gap-2 mb-6 bg-panel p-2 rounded-lg border border-borderCol inline-flex shadow-sm">
                 <button onclick="filterHistory('all')" id="flt-all" class="px-4 py-1.5 text-sm font-bold rounded-md bg-accent text-white filter-btn transition-colors">Semua</button>
                 <button onclick="filterHistory('today')" id="flt-today" class="px-4 py-1.5 text-sm font-bold rounded-md text-textSec hover:text-textMain bg-transparent filter-btn transition-colors">Hari Ini</button>
@@ -294,7 +295,7 @@
                     </select>
                     <button id="btnSelectAllMedia" class="px-3 py-2 text-textSec bg-bgMain border border-borderCol hover:border-accent hover:text-accent transition-colors rounded-lg text-sm font-bold shadow-sm">Pilih Semua</button>
                     <button id="btnDeleteSelectedMedia" class="hidden px-3 py-2 bg-[var(--error-bg)] text-[var(--error-text)] border border-[var(--error-text)] hover:bg-red-700 hover:text-white transition-colors rounded-lg text-sm font-bold shadow-sm flex items-center gap-1">
-                        <span class="font-mono font-bold">[X]</span> Hapus Terpilih (<span id="selectedMediaCount">0</span>)
+                        <span class="font-mono font-bold">[X]</span> Hapus (<span id="selectedMediaCount">0</span>)
                     </button>
                 </div>
             </div>
@@ -391,7 +392,6 @@
         const pArrow = document.getElementById('platformArrow');
 
         if(pTrigger) {
-            // Setup Inisial (Teks dari opsi pertama yg terpilih via HTML)
             const defaultOpt = document.querySelector(`.platform-option[data-value="${pInput.value}"]`);
             if(defaultOpt) pSelectedText.innerHTML = defaultOpt.innerHTML;
 
@@ -410,9 +410,7 @@
             }
             document.querySelectorAll('.platform-option').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    pInput.value = e.currentTarget.dataset.value;
-                    pSelectedText.innerHTML = e.currentTarget.innerHTML;
-                    updateLivePreview();
+                    pInput.value = e.currentTarget.dataset.value; pSelectedText.innerHTML = e.currentTarget.innerHTML; updateLivePreview();
                 });
             });
         }
@@ -532,34 +530,32 @@
         }
 
         window.filterHistory = function(type) {
-            $('.filter-btn').removeClass('bg-accent text-white').addClass('text-textSec bg-transparent');
-            $(`#flt-${type}`).removeClass('text-textSec bg-transparent').addClass('bg-accent text-white');
+            document.querySelectorAll('.filter-btn').forEach(btn => { btn.classList.remove('bg-accent', 'text-white'); btn.classList.add('text-textSec', 'bg-transparent'); });
+            const actBtn = document.getElementById(`flt-${type}`);
+            if(actBtn) { actBtn.classList.remove('text-textSec', 'bg-transparent'); actBtn.classList.add('bg-accent', 'text-white'); }
             renderPlannerHistory(type);
         }
 
         function renderPlannerHistory(filterType) {
-            const container = $('#scheduledContainer'); container.empty();
+            const container = document.getElementById('scheduledContainer'); container.innerHTML = '';
             let filtered = allPostsData;
             const now = new Date(); const currMonth = now.getMonth(); const currYear = now.getFullYear();
             const currDateStr = now.toISOString().split('T')[0];
 
             if (filterType === 'today') filtered = allPostsData.filter(p => p.scheduled_date_raw === currDateStr);
-            else if (filterType === 'month') filtered = allPostsData.filter(p => parseInt(p.month)-1 === currMonth && parseInt(p.year) === currYear);
+            else if (filterType === 'month') filtered = allPostsData.filter(p => parseInt(p.scheduled_date_raw.split('-')[1])-1 === currMonth && parseInt(p.scheduled_date_raw.split('-')[0]) === currYear);
 
             if(filtered.length === 0) {
-                container.html('<div class="bg-panel border border-borderCol rounded-xl p-12 text-center text-textSec flex flex-col items-center justify-center shadow-sm"><span class="text-4xl mb-4 font-mono font-bold opacity-50">[@]</span><p>Tidak ada riwayat atau antrean pada rentang waktu ini.</p></div>');
-                return;
+                container.innerHTML = '<div class="bg-panel border border-borderCol rounded-xl p-12 text-center text-textSec flex flex-col items-center justify-center shadow-sm"><span class="text-4xl mb-4 font-mono font-bold opacity-50">[@]</span><p>Tidak ada riwayat atau antrean.</p></div>'; return;
             }
 
             const groups = {};
-            filtered.forEach(post => {
-                let label = getDateLabel(post.scheduled_date_raw);
-                if(!groups[label]) groups[label] = []; groups[label].push(post);
-            });
+            filtered.forEach(post => { let label = getDateLabel(post.scheduled_date_raw); if(!groups[label]) groups[label] = []; groups[label].push(post); });
 
+            let html = '';
             for (const [dateLabel, posts] of Object.entries(groups)) {
                 let labelColor = 'text-textSec'; if(dateLabel === 'Hari Ini') labelColor = 'text-accent font-black';
-                let html = `<div class="mb-8"><h3 class="text-sm font-bold uppercase tracking-widest mb-4 border-b border-borderCol pb-2 ${labelColor}">${dateLabel}</h3><div class="space-y-4">`;
+                html += `<div class="mb-8"><h3 class="text-sm font-bold uppercase tracking-widest mb-4 border-b border-borderCol pb-2 ${labelColor}">${dateLabel}</h3><div class="space-y-4">`;
 
                 posts.forEach(p => {
                     let cSnippet = p.content.replace(/<[^>]*>?/gm, '');
@@ -601,34 +597,37 @@
                         ${actions}
                     </div>`;
                 });
-                html += `</div></div>`; container.append(html);
+                html += `</div></div>`;
             }
+            container.innerHTML = html;
         }
 
-        window.openEditModal = function(id, d, t) { $('#edit_post_id').val(id); $('#edit_date').val(d); $('#edit_time').val(t); $('#ezEditModal').removeClass('hidden').removeClass('opacity-0'); $('#ezEditModalContent').removeClass('scale-95'); }
-        window.closeEditModal = function() { $('#ezEditModal').addClass('opacity-0'); $('#ezEditModalContent').addClass('scale-95'); setTimeout(() => $('#ezEditModal').addClass('hidden'), 200); }
+        window.openEditModal = function(id, d, t) { document.getElementById('edit_post_id').val = id; document.getElementById('edit_date').value = d; document.getElementById('edit_time').value = t; const m = document.getElementById('ezEditModal'); m.classList.remove('hidden'); setTimeout(()=>m.classList.remove('opacity-0'),10); }
+        window.closeEditModal = function() { const m = document.getElementById('ezEditModal'); m.classList.add('opacity-0'); setTimeout(()=>m.classList.add('hidden'),200); }
 
-        $('#editScheduleForm').submit(async function(e) {
+        document.getElementById('editScheduleForm')?.addEventListener('submit', async function(e) {
             e.preventDefault();
             const fd = new FormData(); fd.append('action', 'edit_schedule'); fd.append('csrf_token', csrfToken);
-            fd.append('post_id', $('#edit_post_id').val()); fd.append('new_date', $('#edit_date').val()); fd.append('new_time', $('#edit_time').val());
+            fd.append('post_id', document.getElementById('edit_post_id').val); fd.append('new_date', document.getElementById('edit_date').value); fd.append('new_time', document.getElementById('edit_time').value);
             try {
                 const res = await fetch('api.php', { method: 'POST', body: fd }); const data = parseSafeJSON(await res.text());
                 showToast(data.message, data.status); if(data.status === 'success') { closeEditModal(); loadScheduledPosts(); }
             } catch(e) { showToast("Gagal mengubah jadwal", "error"); }
         });
 
-        $(document).on('click', '.force-publish-btn', async function() {
-            let btn = $(this); let pid = btn.data('id'); let ori = btn.html();
-            btn.prop('disabled', true).html('<span class="font-mono">[*]</span> Memproses...');
-            try {
-                const fd = new FormData(); fd.append('action', 'force_publish'); fd.append('csrf_token', csrfToken); fd.append('post_id', pid);
-                const res = await fetch('api.php', { method: 'POST', body: fd }); const data = parseSafeJSON(await res.text());
-                if(data.status === 'success') {
-                    showToast("Sedang dikirimkan...", "success");
-                    fetch('cron.php?secret=EZPost1995').finally(() => loadScheduledPosts());
-                } else { showToast(data.message, 'error'); btn.prop('disabled', false).html(ori); }
-            } catch (e) { showToast('Gagal memanggil API.', 'error'); btn.prop('disabled', false).html(ori); }
+        document.addEventListener('click', async function(e) {
+            if(e.target && e.target.closest('.force-publish-btn')) {
+                let btn = e.target.closest('.force-publish-btn'); let pid = btn.dataset.id; let ori = btn.innerHTML;
+                btn.disabled = true; btn.innerHTML = '<span class="font-mono">[*]</span> Memproses...';
+                try {
+                    const fd = new FormData(); fd.append('action', 'force_publish'); fd.append('csrf_token', csrfToken); fd.append('post_id', pid);
+                    const res = await fetch('api.php', { method: 'POST', body: fd }); const data = parseSafeJSON(await res.text());
+                    if(data.status === 'success') {
+                        showToast("Sedang dikirimkan...", "success");
+                        fetch('cron.php?secret=EZPost1995').finally(() => loadScheduledPosts());
+                    } else { showToast(data.message, 'error'); btn.disabled = false; btn.innerHTML = ori; }
+                } catch (e) { showToast('Gagal memanggil API.', 'error'); btn.disabled = false; btn.innerHTML = ori; }
+            }
         });
 
         window.deleteScheduledPost = function(id) {
@@ -641,7 +640,7 @@
             });
         }
 
-        // --- SISTEM DINAMIS: GALERI MEDIA ---
+        // --- GALERI MEDIA ---
         let mediaItems = []; let selectedMediaIds = new Set();
         async function loadMediaGallery() {
             const container = document.getElementById('mediaContainer'); if(!container) return;
@@ -659,7 +658,7 @@
 
         function renderMediaGallery() {
             const container = document.getElementById('mediaContainer'); const sortMode = document.getElementById('mediaSortSelect').value;
-            if (mediaItems.length === 0) { container.innerHTML = '<div class="bg-panel border border-borderCol rounded-xl p-12 text-center text-textSec font-bold shadow-sm">Galeri server Anda bersih.</div>'; return; }
+            if (mediaItems.length === 0) { container.innerHTML = '<div class="bg-panel border border-borderCol rounded-xl p-12 text-center text-textSec font-bold shadow-sm">Galeri kosong.</div>'; return; }
 
             let sorted = [...mediaItems];
             if (sortMode === 'size') sorted.sort((a, b) => b.size - a.size); else sorted.sort((a, b) => b.date - a.date);
@@ -682,10 +681,7 @@
                     ${protectionBadge}
                     <div class="absolute top-2 right-2 w-6 h-6 rounded border-2 ${isSelected ? 'bg-accent border-accent text-white' : 'bg-black/50 border-white/50 text-transparent'} flex items-center justify-center transition-colors z-20 font-mono font-bold text-xs">V</div>
                     ${visual}
-                    <div class="p-2 bg-panel text-xs text-textMain flex justify-between items-center border-t border-borderCol font-mono">
-                        <span class="truncate font-bold">${formatBytes(item.size)}</span>
-                        <span class="text-textSec font-bold">${item.is_video ? 'MP4' : 'IMG'}</span>
-                    </div>
+                    <div class="p-2 bg-panel text-xs text-textMain flex justify-between items-center border-t border-borderCol font-mono"><span class="truncate font-bold">${formatBytes(item.size)}</span><span class="text-textSec font-bold">${item.is_video ? 'MP4' : 'IMG'}</span></div>
                 </div>`;
             });
             html += '</div>'; container.innerHTML = html; updateMediaActionState();
@@ -723,26 +719,21 @@
                 try {
                     const res = await fetch('api.php', { method: 'POST', body: new FormData(loginForm) });
                     const rawText = await res.text();
-                    
                     let data;
-                    try {
-                        data = parseSafeJSON(rawText);
-                    } catch (err) {
-                        document.getElementById('loginError').innerHTML = "Format Server Rusak:<br>" + rawText.substring(0, 100);
-                        document.getElementById('loginError').classList.remove('hidden');
-                        btn.innerHTML = oriHtml; btn.disabled = false;
-                        return;
+                    try { data = parseSafeJSON(rawText); } 
+                    catch (err) {
+                        alert("SERVER ERROR (Bukan JSON):\n" + rawText.substring(0, 200));
+                        throw err;
                     }
 
-                    if (data.status === 'success') {
-                        location.reload();
-                    } else {
+                    if (data.status === 'success') { location.reload(); } 
+                    else {
                         document.getElementById('loginError').textContent = data.message;
                         document.getElementById('loginError').classList.remove('hidden');
                         btn.innerHTML = oriHtml; btn.disabled = false;
                     }
                 } catch(e) { 
-                    document.getElementById('loginError').textContent = "Kesalahan Jaringan / Koneksi Terputus."; 
+                    document.getElementById('loginError').textContent = "Kesalahan Jaringan. Cek Server/Config."; 
                     document.getElementById('loginError').classList.remove('hidden'); 
                     btn.innerHTML = oriHtml; btn.disabled = false; 
                 }
@@ -778,7 +769,6 @@
             });
         }
 
-        // Live Preview Tabs & Logic
         const tabsContainer = document.getElementById('previewTabsContainer');
         function updateLivePreview() {
             if(!textarea) return;
@@ -844,23 +834,19 @@
 
         if (document.getElementById('platformSelect')) document.getElementById('platformSelect').addEventListener('change', updateLivePreview);
 
-        // --- SUBMIT API (DENGAN PROGRESS BAR) ---
+        // --- SUBMIT API LOGIC ---
         async function submitPost() {
             if (isTimeError) return showModal('Informasi', 'Lengkapi atau perbaiki Waktu (Tanggal & Jam) jika ingin menjadwalkan post.');
 
-            const content = textarea.value.trim();
-            const platform = document.getElementById('platformSelect').value;
-            const dateVal = document.getElementById('scheduleDate').value;
-            const timeVal = document.getElementById('scheduleTimeHour').value;
+            const content = textarea.value.trim(); const platform = document.getElementById('platformSelect').value;
+            const dateVal = document.getElementById('scheduleDate').value; const timeVal = document.getElementById('scheduleTimeHour').value;
             let scheduledAt = ''; let isScheduled = false;
 
             if (dateVal && timeVal) { scheduledAt = `${dateVal} ${timeVal}:00`; isScheduled = true; }
             if (!content && selectedFiles.length === 0) return showModal('Informasi', 'Konten tulisan atau media tidak boleh kosong!');
 
             const formData = new FormData();
-            formData.append('action', 'save_post');
-            formData.append('csrf_token', csrfToken);
-            formData.append('platform', platform);
+            formData.append('action', 'save_post'); formData.append('csrf_token', csrfToken); formData.append('platform', platform);
             formData.append('content', content);
             if (isScheduled) formData.append('scheduled_at', scheduledAt);
             selectedFiles.forEach(file => formData.append('media[]', file));
@@ -889,7 +875,10 @@
                 
                 let data;
                 try { data = parseSafeJSON(rawText); } 
-                catch (parseError) { throw new Error('Server PHP memunculkan Error rahasia.'); }
+                catch (parseError) { 
+                    alert("SERVER ERROR PHP:\n\n" + rawText.substring(0,300));
+                    throw new Error('Server memunculkan Error PHP.'); 
+                }
 
                 if (data.status === 'success') {
                     showToast(data.message, 'success');
@@ -899,13 +888,21 @@
                 } else { showModal('Ditolak Meta', data.message); }
             } catch (err) {
                 if(progressInterval) clearInterval(progressInterval);
-                showModal('Koneksi Putus', 'Server memutus sambungan. Video/Gambar melebihi batas atau Timeout Eksekusi.');
+                if(err.message !== 'Server memunculkan Error PHP.') showModal('Koneksi Putus', 'Server memutus sambungan. Video/Gambar melebihi batas atau Timeout Eksekusi.');
             } finally {
                 btn.innerHTML = oriHtml; btn.className = oriClasses; btn.disabled = false;
             }
         }
 
         document.getElementById('btnPublish')?.addEventListener('click', submitPost);
+        
+        // Cek router URL
+        window.addEventListener('hashchange', () => {
+            const hash = window.location.hash.substring(1);
+            if(hash && document.querySelector(`[data-target="${hash}"]`)) {
+                document.querySelector(`[data-target="${hash}"]`).click();
+            }
+        });
     </script>
 </body>
 </html>
