@@ -8,12 +8,6 @@
     <meta name="csrf-token" content="<?php echo $_SESSION['csrf_token']; ?>">
     
     <script>
-        // Tangkap semua error global agar tidak mati diam-diam
-        window.onerror = function(msg, url, lineNo, columnNo, error) {
-            alert("SYSTEM CRASH!\nSilakan Hard Refresh (CTRL+F5).\nError: " + msg);
-            return false;
-        };
-
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
         } else {
@@ -97,8 +91,8 @@
             <h3 class="text-xl font-bold text-textMain mb-4 flex items-center gap-2"><span class="text-accent font-mono">[@]</span> Ubah Jadwal</h3>
             <form id="editScheduleForm" class="space-y-4">
                 <input type="hidden" id="edit_post_id">
-                <div><label class="block text-xs text-textSec mb-1 font-bold">Tanggal Baru</label><input type="date" id="edit_date" required class="w-full px-4 py-2.5 bg-bgMain border border-borderCol rounded-lg text-textMain focus:border-accent outline-none uppercase"></div>
-                <div><label class="block text-xs text-textSec mb-1 font-bold">Waktu Baru</label><input type="time" id="edit_time" required class="w-full px-4 py-2.5 bg-bgMain border border-borderCol rounded-lg text-textMain focus:border-accent outline-none"></div>
+                <div><label class="block text-xs text-textSec mb-1 font-bold">Tanggal Baru</label><input type="date" id="edit_date" required class="w-full px-4 py-2.5 bg-bgMain border border-borderCol rounded-lg text-textMain focus:border-accent outline-none uppercase" onkeydown="return false"></div>
+                <div><label class="block text-xs text-textSec mb-1 font-bold">Waktu Baru</label><input type="time" id="edit_time" required class="w-full px-4 py-2.5 bg-bgMain border border-borderCol rounded-lg text-textMain focus:border-accent outline-none" onkeydown="return false"></div>
                 <div class="pt-4 flex gap-3">
                     <button type="button" onclick="closeEditModal()" class="flex-1 px-4 py-2.5 bg-bgMain border border-borderCol text-textSec hover:text-textMain rounded-lg font-bold transition-colors">Batal</button>
                     <button type="submit" class="flex-1 px-4 py-2.5 bg-accent hover:bg-accentHover text-white rounded-lg font-bold transition-colors shadow-md">Simpan</button>
@@ -334,8 +328,14 @@
     <?php endif; ?>
 
     <script>
+        // === 1. VARIABEL GLOBAL (MENCEGAH CRASH HOISTING) ===
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-        
+        let selectedFiles = []; 
+        let allPostsData = [];
+        let mediaItems = []; 
+        let selectedMediaIds = new Set();
+        let isTimeError = false;
+
         // --- SAFE JSON PARSER ---
         function parseSafeJSON(rawText) {
             try { return JSON.parse(rawText); } 
@@ -442,7 +442,6 @@
         }
         
         // --- SMART BUTTON & DATETIME ---
-        let isTimeError = false;
         const dateInput = document.getElementById('scheduleDate');
         const timeInput = document.getElementById('scheduleTimeHour');
         const clearBtn = document.getElementById('btnClearDate');
@@ -505,8 +504,6 @@
         }
 
         // --- SISTEM DINAMIS: PLANNER ---
-        let allPostsData = [];
-        
         function getDateLabel(dateStr) {
             const today = new Date(); const target = new Date(dateStr);
             const tDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -602,13 +599,13 @@
             container.innerHTML = html;
         }
 
-        window.openEditModal = function(id, d, t) { document.getElementById('edit_post_id').val = id; document.getElementById('edit_date').value = d; document.getElementById('edit_time').value = t; const m = document.getElementById('ezEditModal'); m.classList.remove('hidden'); setTimeout(()=>m.classList.remove('opacity-0'),10); }
+        window.openEditModal = function(id, d, t) { document.getElementById('edit_post_id').value = id; document.getElementById('edit_date').value = d; document.getElementById('edit_time').value = t; const m = document.getElementById('ezEditModal'); m.classList.remove('hidden'); setTimeout(()=>m.classList.remove('opacity-0'),10); }
         window.closeEditModal = function() { const m = document.getElementById('ezEditModal'); m.classList.add('opacity-0'); setTimeout(()=>m.classList.add('hidden'),200); }
 
         document.getElementById('editScheduleForm')?.addEventListener('submit', async function(e) {
             e.preventDefault();
             const fd = new FormData(); fd.append('action', 'edit_schedule'); fd.append('csrf_token', csrfToken);
-            fd.append('post_id', document.getElementById('edit_post_id').val); fd.append('new_date', document.getElementById('edit_date').value); fd.append('new_time', document.getElementById('edit_time').value);
+            fd.append('post_id', document.getElementById('edit_post_id').value); fd.append('new_date', document.getElementById('edit_date').value); fd.append('new_time', document.getElementById('edit_time').value);
             try {
                 const res = await fetch('api.php', { method: 'POST', body: fd }); const data = parseSafeJSON(await res.text());
                 showToast(data.message, data.status); if(data.status === 'success') { closeEditModal(); loadScheduledPosts(); }
@@ -641,7 +638,6 @@
         }
 
         // --- GALERI MEDIA ---
-        let mediaItems = []; let selectedMediaIds = new Set();
         async function loadMediaGallery() {
             const container = document.getElementById('mediaContainer'); if(!container) return;
             container.innerHTML = '<div class="text-center py-12"><svg class="animate-spin inline w-8 h-8 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></div>';
