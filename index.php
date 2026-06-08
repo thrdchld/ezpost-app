@@ -770,6 +770,22 @@
         }
 
         const tabsContainer = document.getElementById('previewTabsContainer');
+        function splitThreads(text) {
+            const paragraphs = text.split(/\n\s*\n/); let threads = [];
+            paragraphs.forEach(p => {
+                const trimmed = p.trim(); if (trimmed.length === 0) return;
+                if (trimmed.length > 490) { 
+                    let words = trimmed.split(' '); let currentChunk = '';
+                    words.forEach(word => {
+                        if ((currentChunk + word).length > 490) { threads.push(currentChunk.trim()); currentChunk = word + ' '; } 
+                        else { currentChunk += word + ' '; }
+                    });
+                    if (currentChunk.trim()) threads.push(currentChunk.trim());
+                } else { threads.push(trimmed); }
+            });
+            return threads;
+        }
+
         function updateLivePreview() {
             if(!textarea) return;
             const text = textarea.value; const platform = document.getElementById('platformSelect').value;
