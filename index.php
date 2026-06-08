@@ -722,14 +722,30 @@
                 
                 try {
                     const res = await fetch('api.php', { method: 'POST', body: new FormData(loginForm) });
-                    const data = parseSafeJSON(await res.text());
-                    if (data.status === 'success') location.reload();
-                    else {
+                    const rawText = await res.text();
+                    
+                    let data;
+                    try {
+                        data = parseSafeJSON(rawText);
+                    } catch (err) {
+                        document.getElementById('loginError').innerHTML = "Format Server Rusak:<br>" + rawText.substring(0, 100);
+                        document.getElementById('loginError').classList.remove('hidden');
+                        btn.innerHTML = oriHtml; btn.disabled = false;
+                        return;
+                    }
+
+                    if (data.status === 'success') {
+                        location.reload();
+                    } else {
                         document.getElementById('loginError').textContent = data.message;
                         document.getElementById('loginError').classList.remove('hidden');
                         btn.innerHTML = oriHtml; btn.disabled = false;
                     }
-                } catch(e) { showModal('Error', "Kesalahan JSON/Server saat login."); btn.innerHTML = oriHtml; btn.disabled = false; }
+                } catch(e) { 
+                    document.getElementById('loginError').textContent = "Kesalahan Jaringan / Koneksi Terputus."; 
+                    document.getElementById('loginError').classList.remove('hidden'); 
+                    btn.innerHTML = oriHtml; btn.disabled = false; 
+                }
             });
         }
         function logout() { fetch('api.php', {method: 'POST', body: new URLSearchParams({'action':'logout'})}).then(() => location.reload()); }
@@ -770,13 +786,11 @@
             let isFb = platform === 'facebook' || platform.startsWith('fb_threads');
             let isTh = platform === 'threads' || platform.startsWith('fb_threads');
             
-            // Build Tabs Header
             let tHtml = '';
             if(isFb) tHtml += `<button class="px-4 py-2 font-bold text-sm border-b-2 text-[#1877F2] border-[#1877F2] prev-tab-btn" data-target="fb"><span class="font-mono">[FB]</span> Facebook</button>`;
             if(isTh) tHtml += `<button class="px-4 py-2 font-bold text-sm border-b-2 text-textSec border-transparent prev-tab-btn" data-target="th"><span class="font-mono">[TH]</span> Threads</button>`;
             tabsContainer.innerHTML = tHtml;
 
-            // Handle Tab Clicking
             document.querySelectorAll('.prev-tab-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     document.querySelectorAll('.prev-tab-btn').forEach(b => { b.classList.remove('text-[#1877F2]', 'text-white', 'border-[#1877F2]', 'border-white'); b.classList.add('text-textSec', 'border-transparent'); });
@@ -787,7 +801,6 @@
                     document.getElementById('prev-' + tgt).classList.remove('hidden');
                 });
             });
-            // Aktifkan tab pertama
             if(document.querySelector('.prev-tab-btn')) document.querySelector('.prev-tab-btn').click();
 
             if (text.length === 0 && selectedFiles.length === 0) {
@@ -826,7 +839,6 @@
                 cHtml += `<div id="prev-th" class="prev-content-pane hidden">${thCont}</div>`;
             }
             livePreviewArea.innerHTML = cHtml;
-            // Tampilkan aktif lagi
             if(document.querySelector('.prev-tab-btn')) document.querySelector('.prev-tab-btn').click();
         }
 
