@@ -200,12 +200,6 @@ try {
     if ($action === 'delete_post') {
         $post_id = (int)$_POST['post_id'];
         
-        // Opsional: Jika ingin menghapus file fisik juga
-        // $stmt = $pdo->prepare("SELECT file_path FROM post_media WHERE post_id = ?");
-        // $stmt->execute([$post_id]);
-        // $media = $stmt->fetchAll();
-        // foreach($media as $m) { @unlink(__DIR__ . '/' . $m['file_path']); }
-        
         $pdo->prepare("DELETE FROM post_media WHERE post_id = ?")->execute([$post_id]);
         $stmt = $pdo->prepare("DELETE FROM posts WHERE id = ? AND user_id = ?");
         $stmt->execute([$post_id, $_SESSION['user_id']]);
@@ -229,52 +223,4 @@ try {
                     $size = filesize($path);
                     $date = filemtime($path);
                     $mime = mime_content_type($path);
-                    $type = (strpos($mime, 'video') !== false) ? 'video' : 'image';
-                    
-                    $files_data[] = [
-                        'name' => $file,
-                        'url' => 'uploads/' . $file,
-                        'size' => round($size / 1024 / 1024, 2) . ' MB',
-                        'timestamp' => $date,
-                        'date_formatted' => date('d M Y, H:i', $date),
-                        'type' => $type
-                    ];
-                }
-            }
-        }
-        
-        // Urutkan dari yang terbaru
-        usort($files_data, function($a, $b) { return $b['timestamp'] - $a['timestamp']; });
-        
-        echo json_encode(['status' => 'success', 'data' => $files_data]);
-        exit;
-    }
-
-    // ==========================================
-    // 9. FUNGSI HAPUS MEDIA (GALERI)
-    // ==========================================
-    if ($action === 'delete_media') {
-        $filename = $_POST['filename'] ?? '';
-        if(empty($filename)) {
-            echo json_encode(['status' => 'error', 'message' => 'File tidak valid']); exit;
-        }
-
-        $filepath = __DIR__ . '/uploads/' . basename($filename); // Keamanan: basename mencegah path traversal
-        if(file_exists($filepath)) {
-            if(unlink($filepath)) {
-                echo json_encode(['status' => 'success', 'message' => 'File media berhasil dihapus dari server.']);
-            } else {
-                echo json_encode(['status' => 'error', 'message' => 'Gagal menghapus file. Periksa permissions.']);
-            }
-        } else {
-            echo json_encode(['status' => 'error', 'message' => 'File tidak ditemukan di server.']);
-        }
-        exit;
-    }
-
-    echo json_encode(['status' => 'error', 'message' => 'Action API tidak dikenali.']);
-
-} catch (Exception $e) {
-    echo json_encode(['status' => 'error', 'message' => 'Database Error: ' . $e->getMessage()]);
-}
-?>
+                    $type = (strpos($mime, 'video')
