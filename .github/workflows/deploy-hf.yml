@@ -1,0 +1,41 @@
+name: Deploy to Hugging Face Space
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Push to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "github-actions"
+
+          git clone https://thrdchld:$HF_TOKEN@huggingface.co/spaces/thrdchld/ezpost-app space
+
+          rsync -av \
+            --delete \
+            --exclude ".git" \
+            --exclude ".github" \
+            ./ space/
+
+          cd space
+
+          git add .
+
+          if git diff --cached --quiet; then
+            echo "No changes to deploy"
+            exit 0
+          fi
+
+          git commit -m "Deploy from GitHub Actions"
+          git push
