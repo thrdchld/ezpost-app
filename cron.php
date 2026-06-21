@@ -121,7 +121,12 @@ function cron_publish_to_fb_direct($text, $token, $page_id, $media_files) {
 }
 
 function cron_publish_to_threads_direct($content, $token, $media_files) {
-    $threadsArray = cron_split_threads($content);
+    if (class_exists('App\Services\ThreadsSplitter')) {
+        $splitter = new \App\Services\ThreadsSplitter();
+        $threadsArray = $splitter->split($content);
+    } else {
+        $threadsArray = cron_split_threads($content);
+    }
     $reply_to_id = null; 
 
     foreach ($threadsArray as $index => $textChunk) {

@@ -1,0 +1,19 @@
+# Dependensi Composer
+/vendor/
+
+# Binary Composer lokal
+/composer
+
+# Cache PHPUnit
+/.phpunit.cache/
+
+# Folder Uploads (Abaikan semua file di dalamnya kecuali .gitkeep)
+/uploads/*
+!/uploads/.gitkeep
+
+# File sementara progress upload
+/uploads/progress_*.txt
+
+# File sistem OS
+.DS_Store
+Thumbs.db

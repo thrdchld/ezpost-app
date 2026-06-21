@@ -2,6 +2,10 @@
 // Pengaturan Zona Waktu Server PHP ke WIB
 date_default_timezone_set('Asia/Jakarta');
 
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+}
+
 session_start();
 
 $db_host = 'gateway01.ap-southeast-1.prod.alicloud.tidbcloud.com';
